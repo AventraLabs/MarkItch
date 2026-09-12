@@ -8,6 +8,7 @@ import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { CHALLENGE_WINDOW_MS, effectiveStatus, getLivePendingChallengeBetween } from "@/lib/challenge";
 import { PITCH_CATEGORY, PRODUCTION_WINDOW_MS } from "@/lib/battle-format";
+import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
 
 export type ChallengeFormState = { error?: string } | undefined;
 
@@ -30,6 +31,11 @@ export async function sendChallenge(_prevState: ChallengeFormState, formData: Fo
   const existing = await getLivePendingChallengeBetween(myBrand.id, challengedBrandId);
   if (existing) {
     return { error: "Zwischen euch läuft bereits eine offene Einladung." };
+  }
+
+  const { allowed } = await checkRateLimit("challenge", myBrand.id);
+  if (!allowed) {
+    return { error: RATE_LIMIT_MESSAGE };
   }
 
   await db.insert(challenges).values({
@@ -77,6 +83,11 @@ export async function sendChallengeFromSoloPitch(
   const existing = await getLivePendingChallengeBetween(myBrand.id, pitch.brandId);
   if (existing) {
     return { error: "Zwischen euch läuft bereits eine offene Einladung." };
+  }
+
+  const { allowed } = await checkRateLimit("challenge", myBrand.id);
+  if (!allowed) {
+    return { error: RATE_LIMIT_MESSAGE };
   }
 
   await db.insert(challenges).values({

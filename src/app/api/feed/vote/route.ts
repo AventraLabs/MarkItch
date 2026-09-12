@@ -4,11 +4,20 @@ import { db } from "@/db";
 import { battles } from "@/db/schema";
 import { getOptionalUser } from "@/lib/session";
 import { castVoteForUser, getVoteTally } from "@/lib/vote";
+import { checkRateLimit, getClientIp, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   const viewer = await getOptionalUser();
   if (!viewer) {
     return NextResponse.json({ error: "Bitte melde dich an." }, { status: 401 });
+  }
+
+  // Phase 14: per-IP, not per-user — the unique index on (battleId, userId)
+  // already stops one account voting twice on the same Duell; this catches
+  // a script spinning through many accounts from the same place instead.
+  const { allowed } = await checkRateLimit("vote", await getClientIp(request));
+  if (!allowed) {
+    return NextResponse.json({ error: RATE_LIMIT_MESSAGE }, { status: 429 });
   }
 
   const body = await request.json().catch(() => null);

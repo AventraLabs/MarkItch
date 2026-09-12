@@ -4,12 +4,18 @@ import { db } from "@/db";
 import { soloPitches, reactions } from "@/db/schema";
 import { getOptionalUser } from "@/lib/session";
 import { toggleSoloPitchLikeForUser, toggleReactionLikeForUser } from "@/lib/like";
+import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
 
 /** Like toggle for a solo pitch or a reaction — see /api/feed/like for the battle-side equivalent. */
 export async function POST(request: NextRequest) {
   const viewer = await getOptionalUser();
   if (!viewer) {
     return NextResponse.json({ error: "Bitte melde dich an." }, { status: 401 });
+  }
+
+  const { allowed } = await checkRateLimit("like", viewer.id);
+  if (!allowed) {
+    return NextResponse.json({ error: RATE_LIMIT_MESSAGE }, { status: 429 });
   }
 
   const body = await request.json().catch(() => null);

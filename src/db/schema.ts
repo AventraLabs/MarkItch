@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // Phase 1: just what real authentication needs.
@@ -432,3 +432,25 @@ export const reactions = pgTable(
 
 export type Reaction = typeof reactions.$inferSelect;
 export type NewReaction = typeof reactions.$inferInsert;
+
+// Phase 14: rate limiting. One row per "this happened" event — checkRateLimit
+// (src/lib/rate-limit.ts) counts rows for a bucket+identifier within the
+// bucket's own time window rather than maintaining a running counter, same
+// "recompute from raw rows" philosophy as vote tallies/like counts
+// elsewhere. `identifier` is whatever actually identifies the actor for
+// that bucket — an IP address for anonymous actions (register, vote), a
+// brandId for brand actions (challenge, reaction) — deliberately just text,
+// not a foreign key, since what it points at varies by bucket.
+export const rateLimitHits = pgTable(
+  "rate_limit_hits",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    bucket: text("bucket").notNull(),
+    identifier: text("identifier").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("rate_limit_hits_bucket_identifier_created_idx").on(table.bucket, table.identifier, table.createdAt)],
+);
+
+export type RateLimitHit = typeof rateLimitHits.$inferSelect;
+export type NewRateLimitHit = typeof rateLimitHits.$inferInsert;

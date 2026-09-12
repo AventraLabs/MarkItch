@@ -4,11 +4,17 @@ import { db } from "@/db";
 import { battles } from "@/db/schema";
 import { getOptionalUser } from "@/lib/session";
 import { getLikeCount, toggleLikeForUser } from "@/lib/like";
+import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   const viewer = await getOptionalUser();
   if (!viewer) {
     return NextResponse.json({ error: "Bitte melde dich an." }, { status: 401 });
+  }
+
+  const { allowed } = await checkRateLimit("like", viewer.id);
+  if (!allowed) {
+    return NextResponse.json({ error: RATE_LIMIT_MESSAGE }, { status: 429 });
   }
 
   const body = await request.json().catch(() => null);

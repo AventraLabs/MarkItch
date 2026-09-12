@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "blockReadsOutsideWorkingDirectories": true,
+    "additionalDirectories": ["/Users/luca/Desktop/Market Matcher"],
+    "deny": [
+      "Write(/Users/luca/Desktop/**)",
+      "Edit(/Users/luca/Desktop/**)"
+    ],
+    "allow": [
+      "Write(/Users/luca/Desktop/Market Matcher/**)",
+      "Edit(/Users/luca/Desktop/Market Matcher/**)"
+    ]
+  }
+}

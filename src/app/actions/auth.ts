@@ -9,6 +9,7 @@ import { requireUser } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { generateRawToken, hashToken, expiresInHours } from "@/lib/tokens";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/email";
+import { checkRateLimit, getClientIp, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
 import {
   RegisterSchema,
   LoginSchema,
@@ -34,6 +35,15 @@ async function issueVerificationToken(userId: string, email: string) {
 }
 
 export async function registerUser(_prevState: FormState, formData: FormData): Promise<FormState> {
+  // Phase 14: the one lever against mass fake-account creation this stack
+  // has without adding a CAPTCHA/phone-verification dependency — an IP can
+  // still register a handful of real accounts (shared household/office
+  // wifi), just not hundreds in a script.
+  const { allowed } = await checkRateLimit("register", await getClientIp());
+  if (!allowed) {
+    return { errors: { _form: [RATE_LIMIT_MESSAGE] } };
+  }
+
   const parsed = RegisterSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { errors: parsed.error.flatten().fieldErrors };

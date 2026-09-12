@@ -9,6 +9,7 @@ import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { promoteReactionToBattle } from "@/lib/reaction";
 import { uploadVideo, ALLOWED_VIDEO_TYPES } from "@/lib/storage";
+import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
 
 export type ReactionFormState = { error?: string } | undefined;
 
@@ -46,6 +47,11 @@ export async function postReaction(_prevState: ReactionFormState, formData: Form
     .where(eq(reactions.soloPitchId, soloPitchId));
   if (existing) {
     return { error: "Du hast auf diesen Pitch bereits reagiert." };
+  }
+
+  const { allowed } = await checkRateLimit("reaction", myBrand.id);
+  if (!allowed) {
+    return { error: RATE_LIMIT_MESSAGE };
   }
 
   const file = formData.get("video");
