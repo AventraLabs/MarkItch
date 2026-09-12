@@ -267,6 +267,16 @@ export async function seedDemoContent(db: Db): Promise<SeedDemoResult> {
 
     if (!seed.totalVotes) continue;
 
+    // Votes need a createdAt inside the battle's own simulated timeline
+    // (between it going live and votingEndsAt) — not "now", or
+    // getVoteTallyAsOf (the frozen official result, used by the feed and
+    // by /battles/[id]'s share card) would filter every one of them out
+    // for a "finished" battle, since votingEndsAt is in the simulated
+    // past.
+    const voteWindowStartMs = daysAgo(seed.createdDaysAgo).getTime();
+    const voteWindowEndMs = Math.min(votingEndsAt ? votingEndsAt.getTime() : Date.now(), Date.now());
+    const randomVoteDate = () => new Date(voteWindowStartMs + Math.random() * Math.max(1, voteWindowEndMs - voteWindowStartMs));
+
     const total = seed.totalVotes;
     const aVotes = Math.round(total * (seed.aShare ?? 0.5));
     const bVotes = total - aVotes;
@@ -275,10 +285,14 @@ export async function seedDemoContent(db: Db): Promise<SeedDemoResult> {
     const bVoters = voters.slice(aVotes);
 
     if (aVoters.length > 0) {
-      await db.insert(votes).values(aVoters.map((userId) => ({ battleId: battle.id, userId, votedForBrandId: brandAId })));
+      await db
+        .insert(votes)
+        .values(aVoters.map((userId) => ({ battleId: battle.id, userId, votedForBrandId: brandAId, createdAt: randomVoteDate() })));
     }
     if (bVoters.length > 0) {
-      await db.insert(votes).values(bVoters.map((userId) => ({ battleId: battle.id, userId, votedForBrandId: brandBId })));
+      await db
+        .insert(votes)
+        .values(bVoters.map((userId) => ({ battleId: battle.id, userId, votedForBrandId: brandBId, createdAt: randomVoteDate() })));
     }
 
     const aLikers = pickRandom(viewerIds, Math.round(aVotes * 0.6));

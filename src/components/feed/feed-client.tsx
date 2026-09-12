@@ -190,11 +190,12 @@ export function FeedClient({
   }
 
   function handleShare(duel: FeedDuel) {
-    // Phase 10: /pitches/[id] is only the awaiting-videos waiting room now
-    // — a live Duell only exists in the Feed, so that's what a share link
-    // has to point at.
+    // Phase 17: /battles/[id] is the canonical share link now — it carries
+    // a proper preview card (opengraph-image.tsx) for chat apps/socials,
+    // and bounces a human visitor onward to wherever the Duell actually
+    // lives (feed or waiting room) if it isn't a finished result.
     shareUrl(
-      `${window.location.origin}/?battle=${duel.battleId}`,
+      `${window.location.origin}/battles/${duel.battleId}`,
       `${duel.sides[0].brandName} vs. ${duel.sides[1].brandName} auf Market Matcher`,
     );
   }
