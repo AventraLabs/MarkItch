@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { FollowButton } from "@/components/brand/follow-button";
 import type { FeedDuel } from "@/lib/feed";
+import { trackAnalyticsEvent } from "@/lib/analytics-client";
 
 function timeLeftLabel(iso: string): string {
   const hoursLeft = Math.max(0, (new Date(iso).getTime() - Date.now()) / (60 * 60 * 1000));
@@ -142,6 +143,7 @@ export function FeedDuelCard({
   const [inView, setInView] = useState(false);
   const [voting, setVoting] = useState(false);
   const [shareLabel, setShareLabel] = useState<string | null>(null);
+  const trackedViewSides = useRef<Set<0 | 1>>(new Set());
 
   const side = duel.sides[sideIndex];
   const opponent = duel.sides[sideIndex === 0 ? 1 : 0];
@@ -177,6 +179,15 @@ export function FeedDuelCard({
     });
   }, [inView, sideIndex, muted]);
 
+  // Phase 16: a "view" is this side's video actually playing on screen —
+  // once per side per card, not per re-render (flipping back and forth
+  // shouldn't inflate the count).
+  useEffect(() => {
+    if (!inView || trackedViewSides.current.has(sideIndex)) return;
+    trackedViewSides.current.add(sideIndex);
+    trackAnalyticsEvent(duel.sides[sideIndex].brandId, "view");
+  }, [inView, sideIndex, duel.sides]);
+
   async function handleVote() {
     setVoting(true);
     try {
@@ -188,6 +199,8 @@ export function FeedDuelCard({
 
   function handleShare() {
     onShare(duel);
+    trackAnalyticsEvent(duel.sides[0].brandId, "share");
+    trackAnalyticsEvent(duel.sides[1].brandId, "share");
     setShareLabel("Link kopiert!");
     setTimeout(() => setShareLabel(null), 1800);
   }

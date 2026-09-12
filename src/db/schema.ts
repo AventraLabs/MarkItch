@@ -454,3 +454,26 @@ export const rateLimitHits = pgTable(
 
 export type RateLimitHit = typeof rateLimitHits.$inferSelect;
 export type NewRateLimitHit = typeof rateLimitHits.$inferInsert;
+
+// Phase 16: brand analytics. One row per view/share event, always
+// attributed to the brand whose content it was — deliberately not more
+// granular (which exact video, which exact viewer) for now, since the
+// dashboard this feeds only needs brand-level and per-content-item totals,
+// both computable by counting rows. Same "event log, not a counter"
+// philosophy as rate_limit_hits — cheap to extend into a real trend chart
+// later (group by day) without a schema change.
+export const brandAnalyticsEvents = pgTable(
+  "brand_analytics_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    brandId: uuid("brand_id")
+      .notNull()
+      .references(() => brands.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(), // 'view' | 'share'
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("brand_analytics_events_brand_kind_idx").on(table.brandId, table.kind)],
+);
+
+export type BrandAnalyticsEvent = typeof brandAnalyticsEvents.$inferSelect;
+export type NewBrandAnalyticsEvent = typeof brandAnalyticsEvents.$inferInsert;

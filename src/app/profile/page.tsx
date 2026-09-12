@@ -112,9 +112,14 @@ export default async function ProfilePage() {
             )}
             <div>
               <p className="font-semibold text-white">{brand.name}</p>
-              <Link href={`/brands/${brand.slug}`} className="text-sm text-orange-500 hover:underline">
-                Profil ansehen
-              </Link>
+              <div className="flex gap-3">
+                <Link href={`/brands/${brand.slug}`} className="text-sm text-orange-500 hover:underline">
+                  Profil ansehen
+                </Link>
+                <Link href="/dashboard" className="text-sm text-orange-500 hover:underline">
+                  Dashboard →
+                </Link>
+              </div>
             </div>
           </div>
         ) : user.accountType === "acro" ? (

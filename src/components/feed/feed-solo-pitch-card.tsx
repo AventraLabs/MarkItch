@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FollowButton } from "@/components/brand/follow-button";
 import { PitchChallengeButton } from "@/components/pitches/pitch-challenge-button";
 import type { FeedSoloPitch } from "@/lib/feed";
+import { trackAnalyticsEvent } from "@/lib/analytics-client";
 
 export function FeedSoloPitchCard({
   pitch,
@@ -32,6 +33,7 @@ export function FeedSoloPitchCard({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [inView, setInView] = useState(false);
   const [shareLabel, setShareLabel] = useState<string | null>(null);
+  const trackedView = useRef(false);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -47,6 +49,12 @@ export function FeedSoloPitchCard({
   }, []);
 
   useEffect(() => {
+    if (!inView || trackedView.current) return;
+    trackedView.current = true;
+    trackAnalyticsEvent(pitch.brandId, "view");
+  }, [inView, pitch.brandId]);
+
+  useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     video.muted = muted;
@@ -56,6 +64,7 @@ export function FeedSoloPitchCard({
 
   function handleShare() {
     onShare(pitch);
+    trackAnalyticsEvent(pitch.brandId, "share");
     setShareLabel("Link kopiert!");
     setTimeout(() => setShareLabel(null), 1800);
   }

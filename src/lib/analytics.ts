@@ -1,0 +1,184 @@
+import "server-only";
+import { and, count, eq, inArray, or } from "drizzle-orm";
+import { db } from "@/db";
+import { brandAnalyticsEvents, battles, comments, likes, reactions, soloPitches, votes } from "@/db/schema";
+import { getFollowerCount } from "@/lib/follow";
+import { getAllBattles } from "@/lib/battle";
+import { getSoloPitchesForBrand } from "@/lib/solo-pitch";
+
+export type AnalyticsEventKind = "view" | "share";
+
+/** Fire-and-forget event log — see schema.ts for why this is a log, not a counter. */
+export async function recordAnalyticsEvent(brandId: string, kind: AnalyticsEventKind): Promise<void> {
+  await db.insert(brandAnalyticsEvents).values({ brandId, kind });
+}
+
+async function getEventCount(brandId: string, kind: AnalyticsEventKind): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(brandAnalyticsEvents)
+    .where(and(eq(brandAnalyticsEvents.brandId, brandId), eq(brandAnalyticsEvents.kind, kind)));
+  return row?.n ?? 0;
+}
+
+export type BrandAnalyticsSummary = {
+  views: number;
+  shares: number;
+  votesReceived: number;
+  likesReceived: number;
+  commentsReceived: number;
+  reactionsReceived: number;
+  followerCount: number;
+};
+
+/**
+ * Brand-wide totals across every piece of content this brand has ever
+ * posted (solo pitches, both sides of every battle, reactions on their own
+ * pitches). `likes.brandId` is always populated regardless of what the like
+ * actually targets (see schema.ts) — that's what makes a single count()
+ * here work for likes across solo pitches, reactions and battle sides at
+ * once, instead of three separate queries unioned together.
+ */
+export async function getBrandAnalyticsSummary(brandId: string): Promise<BrandAnalyticsSummary> {
+  const myPitchIdRows = await db.select({ id: soloPitches.id }).from(soloPitches).where(eq(soloPitches.brandId, brandId));
+  const myPitchIds = myPitchIdRows.map((r) => r.id);
+
+  const [views, shares, votesRow, likesRow, battleCommentsRow, soloCommentsRow, reactionsRow, followerCount] =
+    await Promise.all([
+      getEventCount(brandId, "view"),
+      getEventCount(brandId, "share"),
+      db.select({ n: count() }).from(votes).where(eq(votes.votedForBrandId, brandId)),
+      db.select({ n: count() }).from(likes).where(eq(likes.brandId, brandId)),
+      db
+        .select({ n: count() })
+        .from(comments)
+        .innerJoin(battles, eq(comments.battleId, battles.id))
+        .where(or(eq(battles.brandAId, brandId), eq(battles.brandBId, brandId))),
+      db
+        .select({ n: count() })
+        .from(comments)
+        .innerJoin(soloPitches, eq(comments.soloPitchId, soloPitches.id))
+        .where(eq(soloPitches.brandId, brandId)),
+      myPitchIds.length
+        ? db.select({ n: count() }).from(reactions).where(inArray(reactions.soloPitchId, myPitchIds))
+        : Promise.resolve([{ n: 0 }]),
+      getFollowerCount(brandId),
+    ]);
+
+  return {
+    views,
+    shares,
+    votesReceived: votesRow[0]?.n ?? 0,
+    likesReceived: likesRow[0]?.n ?? 0,
+    commentsReceived: (battleCommentsRow[0]?.n ?? 0) + (soloCommentsRow[0]?.n ?? 0),
+    reactionsReceived: reactionsRow[0]?.n ?? 0,
+    followerCount,
+  };
+}
+
+export type BrandContentItem = {
+  key: string;
+  kind: "solo" | "battle";
+  label: string; // "Solo-Pitch" or "vs. <opponent>"
+  createdAt: string; // ISO
+  likeCount: number;
+  commentCount: number;
+  /** Only set for kind "solo" — how many brands reacted. */
+  reactionCount?: number;
+  /** Only set for kind "battle" — this brand's vote share of the two sides. */
+  votesForThisBrand?: number;
+  votesTotal?: number;
+};
+
+/** Per-item breakdown so a brand can see which of their videos actually performs. */
+export async function getBrandContentBreakdown(brandId: string): Promise<BrandContentItem[]> {
+  const [soloPitches_, allBattles] = await Promise.all([getSoloPitchesForBrand(brandId), getAllBattles()]);
+  const myBattles = allBattles.filter((b) => b.brandAId === brandId || b.brandBId === brandId);
+
+  const soloPitchIds = soloPitches_.map((p) => p.id);
+  const battleIds = myBattles.map((b) => b.id);
+
+  const [soloLikeCounts, soloCommentCounts, reactionCounts, battleLikeKeys] = await Promise.all([
+    soloPitchIds.length
+      ? db
+          .select({ soloPitchId: likes.soloPitchId, n: count() })
+          .from(likes)
+          .where(inArray(likes.soloPitchId, soloPitchIds))
+          .groupBy(likes.soloPitchId)
+      : Promise.resolve([]),
+    soloPitchIds.length
+      ? db
+          .select({ soloPitchId: comments.soloPitchId, n: count() })
+          .from(comments)
+          .where(inArray(comments.soloPitchId, soloPitchIds))
+          .groupBy(comments.soloPitchId)
+      : Promise.resolve([]),
+    soloPitchIds.length
+      ? db
+          .select({ soloPitchId: reactions.soloPitchId, n: count() })
+          .from(reactions)
+          .where(inArray(reactions.soloPitchId, soloPitchIds))
+          .groupBy(reactions.soloPitchId)
+      : Promise.resolve([]),
+    battleIds.length
+      ? db
+          .select({ battleId: likes.battleId, brandId: likes.brandId, n: count() })
+          .from(likes)
+          .where(inArray(likes.battleId, battleIds))
+          .groupBy(likes.battleId, likes.brandId)
+      : Promise.resolve([]),
+  ]);
+
+  const soloLikeMap = new Map(soloLikeCounts.map((r) => [r.soloPitchId as string, r.n]));
+  const soloCommentMap = new Map(soloCommentCounts.map((r) => [r.soloPitchId as string, r.n]));
+  const reactionMap = new Map(reactionCounts.map((r) => [r.soloPitchId as string, r.n]));
+  const battleLikeMap = new Map(battleLikeKeys.map((r) => [`${r.battleId}:${r.brandId}`, r.n]));
+
+  const battleCommentCounts = battleIds.length
+    ? await db
+        .select({ battleId: comments.battleId, n: count() })
+        .from(comments)
+        .where(inArray(comments.battleId, battleIds))
+        .groupBy(comments.battleId)
+    : [];
+  const battleCommentMap = new Map(battleCommentCounts.map((r) => [r.battleId as string, r.n]));
+
+  const battleVoteCounts = battleIds.length
+    ? await db
+        .select({ battleId: votes.battleId, votedForBrandId: votes.votedForBrandId, n: count() })
+        .from(votes)
+        .where(inArray(votes.battleId, battleIds))
+        .groupBy(votes.battleId, votes.votedForBrandId)
+    : [];
+  const votesByBattleBrand = new Map(battleVoteCounts.map((r) => [`${r.battleId}:${r.votedForBrandId}`, r.n]));
+  const votesTotalByBattle = new Map<string, number>();
+  for (const r of battleVoteCounts) {
+    votesTotalByBattle.set(r.battleId, (votesTotalByBattle.get(r.battleId) ?? 0) + r.n);
+  }
+
+  const soloItems: BrandContentItem[] = soloPitches_.map((p) => ({
+    key: `solo:${p.id}`,
+    kind: "solo",
+    label: "Solo-Pitch",
+    createdAt: p.createdAt.toISOString(),
+    likeCount: soloLikeMap.get(p.id) ?? 0,
+    commentCount: soloCommentMap.get(p.id) ?? 0,
+    reactionCount: reactionMap.get(p.id) ?? 0,
+  }));
+
+  const battleItems: BrandContentItem[] = myBattles.map((b) => {
+    const opponent = b.brandAId === brandId ? b.brandB : b.brandA;
+    return {
+      key: `battle:${b.id}`,
+      kind: "battle",
+      label: `vs. ${opponent.name}`,
+      createdAt: b.createdAt.toISOString(),
+      likeCount: battleLikeMap.get(`${b.id}:${brandId}`) ?? 0,
+      commentCount: battleCommentMap.get(b.id) ?? 0,
+      votesForThisBrand: votesByBattleBrand.get(`${b.id}:${brandId}`) ?? 0,
+      votesTotal: votesTotalByBattle.get(b.id) ?? 0,
+    };
+  });
+
+  return [...soloItems, ...battleItems].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
