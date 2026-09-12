@@ -8,7 +8,9 @@
     ],
     "allow": [
       "Write(/Users/luca/Desktop/Market Matcher/**)",
-      "Edit(/Users/luca/Desktop/Market Matcher/**)"
+      "Edit(/Users/luca/Desktop/Market Matcher/**)",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)"
     ]
   }
 }
