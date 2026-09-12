@@ -8,7 +8,19 @@ import { inArray, like } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "@/db/schema";
-import { users, brands, brandMembers, battles, votes, comments, likes, follows } from "@/db/schema";
+import {
+  users,
+  brands,
+  brandMembers,
+  battles,
+  votes,
+  comments,
+  likes,
+  follows,
+  soloPitches,
+  reactions,
+  challenges,
+} from "@/db/schema";
 
 // Demo content seed — makes the feed feel alive with realistic-looking
 // brand duels instead of the leftover "Live P7 A" QA rows from manual
@@ -112,6 +124,25 @@ const BATTLE_SEEDS: BattleSeed[] = [
   { aSlug: "brewhaus", bSlug: "sprintex", mode: "open", category: DEFAULT_CATEGORY, createdDaysAgo: 9, stage: "finished", votingEndedDaysAgo: 2, totalVotes: 55, aShare: 0.47 },
   { aSlug: "nordwear", bSlug: "byteforge", mode: "open", category: DEFAULT_CATEGORY, createdDaysAgo: 1, stage: "live", votingEndsInDays: 6, totalVotes: 15, aShare: 0.47 },
 ];
+
+// Phase 13: solo pitches / reactions / a pending "Pitch schicken" — enough
+// of each state to see the whole flow live without having to post it
+// yourself first.
+const SOLO_PITCH_SEEDS: { brandSlug: string; createdDaysAgo: number }[] = [
+  { brandSlug: "sprintex", createdDaysAgo: 4 },
+  { brandSlug: "questforge", createdDaysAgo: 2 },
+  { brandSlug: "glowbotanic", createdDaysAgo: 6 },
+];
+
+const REACTION_SEEDS: { soloPitchBrandSlug: string; reactorSlug: string; createdDaysAgo: number; promote?: boolean }[] = [
+  { soloPitchBrandSlug: "sprintex", reactorSlug: "velocia", createdDaysAgo: 3 },
+  // The better-liked reaction is the one that gets "hochgestuft" below —
+  // matches the product logic (best-liked = most promotion-worthy).
+  { soloPitchBrandSlug: "sprintex", reactorSlug: "nordwear", createdDaysAgo: 2, promote: true },
+  { soloPitchBrandSlug: "questforge", reactorSlug: "pixelrealm", createdDaysAgo: 1 },
+];
+
+const PENDING_PITCH_CHALLENGE = { soloPitchBrandSlug: "glowbotanic", challengerSlug: "luxora" };
 
 const COMMENT_POOL = [
   "Krass, das hätte ich nicht erwartet 👀",
@@ -267,6 +298,103 @@ export async function seedDemoContent(db: Db): Promise<SeedDemoResult> {
         })),
       );
     }
+  }
+
+  // Phase 13: solo pitches, reactions, and a pending "Pitch schicken" —
+  // reuses each brand's own demo video asset rather than generating new
+  // clips per reaction.
+  const soloPitchIdBySlug = new Map<string, string>();
+  for (const seed of SOLO_PITCH_SEEDS) {
+    const brandId = brandIdBySlug.get(seed.brandSlug)!;
+    const [pitch] = await db
+      .insert(soloPitches)
+      .values({
+        brandId,
+        videoUrl: videoUrl(seed.brandSlug),
+        category: DEFAULT_CATEGORY,
+        createdAt: daysAgo(seed.createdDaysAgo),
+      })
+      .returning({ id: soloPitches.id });
+    soloPitchIdBySlug.set(seed.brandSlug, pitch.id);
+
+    const likers = pickRandom(viewerIds, 8 + Math.floor(Math.random() * 12));
+    if (likers.length > 0) {
+      await db.insert(likes).values(likers.map((userId) => ({ soloPitchId: pitch.id, brandId, userId })));
+    }
+    const commenters = pickRandom(viewerIds, 1 + Math.floor(Math.random() * 3));
+    const commentTexts = pickRandom(COMMENT_POOL, commenters.length);
+    if (commenters.length > 0) {
+      await db.insert(comments).values(
+        commenters.map((userId, i) => ({ soloPitchId: pitch.id, userId, content: commentTexts[i] })),
+      );
+    }
+  }
+
+  for (const seed of REACTION_SEEDS) {
+    const soloPitchId = soloPitchIdBySlug.get(seed.soloPitchBrandSlug);
+    const reactorBrandId = brandIdBySlug.get(seed.reactorSlug);
+    if (!soloPitchId || !reactorBrandId) continue;
+
+    const [reaction] = await db
+      .insert(reactions)
+      .values({
+        soloPitchId,
+        brandId: reactorBrandId,
+        videoUrl: videoUrl(seed.reactorSlug),
+        createdAt: daysAgo(seed.createdDaysAgo),
+      })
+      .returning({ id: reactions.id });
+
+    // The promoted reaction gets more likes than the other(s) on the same
+    // pitch, so "sortiert nach Likes" visibly picks it as the best answer.
+    const likerCount = seed.promote ? 30 + Math.floor(Math.random() * 10) : 5 + Math.floor(Math.random() * 8);
+    const likers = pickRandom(viewerIds, likerCount);
+    if (likers.length > 0) {
+      await db.insert(likes).values(likers.map((userId) => ({ reactionId: reaction.id, brandId: reactorBrandId, userId })));
+    }
+
+    if (seed.promote) {
+      const pitchBrandId = brandIdBySlug.get(seed.soloPitchBrandSlug)!;
+      const [promotedBattle] = await db
+        .insert(battles)
+        .values({
+          brandAId: pitchBrandId,
+          brandBId: reactorBrandId,
+          mode: "open",
+          category: DEFAULT_CATEGORY,
+          brandAVideoUrl: videoUrl(seed.soloPitchBrandSlug),
+          brandASubmittedAt: daysAgo(SOLO_PITCH_SEEDS.find((s) => s.brandSlug === seed.soloPitchBrandSlug)!.createdDaysAgo),
+          brandBVideoUrl: videoUrl(seed.reactorSlug),
+          brandBSubmittedAt: daysAgo(seed.createdDaysAgo),
+          votingEndsAt: daysFromNow(4),
+        })
+        .returning({ id: battles.id });
+      await db.update(reactions).set({ promotedToBattleId: promotedBattle.id }).where(inArray(reactions.id, [reaction.id]));
+
+      const voters = pickRandom(viewerIds, 40);
+      if (voters.length > 0) {
+        await db.insert(votes).values(
+          voters.map((userId, i) => ({
+            battleId: promotedBattle.id,
+            userId,
+            votedForBrandId: i % 2 === 0 ? pitchBrandId : reactorBrandId,
+          })),
+        );
+      }
+    }
+  }
+
+  const pendingChallengePitchId = soloPitchIdBySlug.get(PENDING_PITCH_CHALLENGE.soloPitchBrandSlug);
+  const pendingChallengerBrandId = brandIdBySlug.get(PENDING_PITCH_CHALLENGE.challengerSlug);
+  const pendingChallengedBrandId = brandIdBySlug.get(PENDING_PITCH_CHALLENGE.soloPitchBrandSlug);
+  if (pendingChallengePitchId && pendingChallengerBrandId && pendingChallengedBrandId) {
+    await db.insert(challenges).values({
+      challengerBrandId: pendingChallengerBrandId,
+      challengedBrandId: pendingChallengedBrandId,
+      soloPitchId: pendingChallengePitchId,
+      status: "pending",
+      expiresAt: daysFromNow(14),
+    });
   }
 
   return { brands: BRANDS.length, battles: BATTLE_SEEDS.length, viewers: VIEWER_COUNT };
