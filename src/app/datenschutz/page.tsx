@@ -11,11 +11,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 // Phase 15: Entwurf einer DSGVO-orientierten Datenschutzerklärung, abgeleitet
 // aus dem tatsächlichen Datenmodell (src/db/schema.ts) und den tatsächlich
-// eingesetzten Diensten — kein generischer Textbaustein. Ersetzt
-// [BETREIBER]/[KONTAKT-E-MAIL] durch die echten Angaben aus dem Impressum,
-// bevor das live geht. Das hier ist ein Entwurf, kein Rechtsrat — vor dem
-// Onboarding echter Marken/Nutzer von einem Anwalt gegenprüfen lassen,
-// gerade wegen der Video-Uploads und Push-Benachrichtigungen.
+// eingesetzten Diensten — kein generischer Textbaustein. Das hier ist ein
+// Entwurf, kein Rechtsrat — vor dem Onboarding echter Marken/Nutzer von
+// einem Anwalt gegenprüfen lassen, gerade wegen der Video-Uploads und
+// Push-Benachrichtigungen.
 export default function DatenschutzPage() {
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-16">
@@ -24,11 +23,11 @@ export default function DatenschutzPage() {
 
       <Section title="Verantwortlicher">
         <p>
-          [BETREIBER], [ANSCHRIFT] — siehe{" "}
+          Austrana Solutions KG, Edi-Finger-Straße 7/6/602, 1210 Wien — siehe{" "}
           <Link href="/impressum" className="text-orange-400 hover:underline">
             Impressum
           </Link>
-          . Kontakt für Datenschutzanliegen: [KONTAKT-E-MAIL]
+          . Kontakt für Datenschutzanliegen: office@austranasolutions.com
         </p>
       </Section>
 
@@ -77,8 +76,8 @@ export default function DatenschutzPage() {
       <Section title="Deine Rechte">
         <p>
           Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit
-          und Widerspruch (Art. 15–21 DSGVO) sowie das Recht, dich bei einer Aufsichtsbehörde zu beschweren. Wende
-          dich dafür an [KONTAKT-E-MAIL].
+          und Widerspruch (Art. 15–21 DSGVO) sowie das Recht, dich bei einer Aufsichtsbehörde zu beschweren (in
+          Österreich: die Datenschutzbehörde, dsb.gv.at). Wende dich dafür an office@austranasolutions.com.
         </p>
       </Section>
 

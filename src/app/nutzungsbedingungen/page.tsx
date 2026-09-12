@@ -10,8 +10,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 // Phase 15: Entwurf, kein Rechtsrat — insbesondere der Rechte-Abschnitt zu
-// hochgeladenen Videos und der Gerichtsstand sollten vor echtem Live-Betrieb
-// anwaltlich geprüft werden. [BETREIBER]/Gerichtsstand sind Platzhalter.
+// hochgeladenen Videos sollte vor echtem Live-Betrieb anwaltlich geprüft
+// werden.
 export default function NutzungsbedingungenPage() {
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-16">
@@ -20,8 +20,8 @@ export default function NutzungsbedingungenPage() {
 
       <Section title="Geltungsbereich">
         <p>
-          Diese Nutzungsbedingungen gelten für alle registrierten Nutzer:innen von Market Matcher, betrieben von
-          [BETREIBER] (siehe{" "}
+          Diese Nutzungsbedingungen gelten für alle registrierten Nutzer:innen von Market Matcher, betrieben von der
+          Austrana Solutions KG (siehe{" "}
           <Link href="/impressum" className="text-orange-400 hover:underline">
             Impressum
           </Link>
@@ -79,8 +79,8 @@ export default function NutzungsbedingungenPage() {
 
       <Section title="Änderungen & Gerichtsstand">
         <p>
-          Wir können diese Bedingungen ändern; wesentliche Änderungen kündigen wir an. Es gilt das Recht
-          [LAND], Gerichtsstand ist [ORT], soweit gesetzlich zulässig.
+          Wir können diese Bedingungen ändern; wesentliche Änderungen kündigen wir an. Es gilt österreichisches
+          Recht, Gerichtsstand ist Wien, soweit gesetzlich zulässig.
         </p>
       </Section>
 
