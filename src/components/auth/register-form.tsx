@@ -79,6 +79,17 @@ export function RegisterForm() {
         errors={state?.errors?.password}
       />
       <SubmitButton>Account erstellen</SubmitButton>
+      <p className="mt-3 text-center text-xs text-zinc-500">
+        Mit der Registrierung akzeptierst du die{" "}
+        <Link href="/nutzungsbedingungen" className="text-orange-400 hover:underline">
+          Nutzungsbedingungen
+        </Link>{" "}
+        und die{" "}
+        <Link href="/datenschutz" className="text-orange-400 hover:underline">
+          Datenschutzerklärung
+        </Link>
+        .
+      </p>
       <p className="mt-4 text-center text-sm text-zinc-400">
         Schon registriert?{" "}
         <Link href="/login" className="text-orange-500 hover:underline">

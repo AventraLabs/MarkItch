@@ -180,9 +180,21 @@ export default async function ProfilePage() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
+      <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
         <h2 className="mb-4 text-lg font-semibold text-white">Passwort ändern</h2>
         <ChangePasswordForm />
+      </div>
+
+      <div className="flex justify-center gap-4 pb-4 text-xs text-zinc-600">
+        <Link href="/impressum" className="hover:text-zinc-400">
+          Impressum
+        </Link>
+        <Link href="/datenschutz" className="hover:text-zinc-400">
+          Datenschutz
+        </Link>
+        <Link href="/nutzungsbedingungen" className="hover:text-zinc-400">
+          Nutzungsbedingungen
+        </Link>
       </div>
     </div>
   );
