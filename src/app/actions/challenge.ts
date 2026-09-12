@@ -3,7 +3,7 @@
 import { eq } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { db } from "@/db";
-import { battles, challenges } from "@/db/schema";
+import { battles, challenges, soloPitches } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { CHALLENGE_WINDOW_MS, effectiveStatus, getLivePendingChallengeBetween } from "@/lib/challenge";
@@ -35,6 +35,54 @@ export async function sendChallenge(_prevState: ChallengeFormState, formData: Fo
   await db.insert(challenges).values({
     challengerBrandId: myBrand.id,
     challengedBrandId,
+    status: "pending",
+    expiresAt: new Date(Date.now() + CHALLENGE_WINDOW_MS),
+  });
+
+  refresh();
+  return undefined;
+}
+
+/**
+ * Phase 13: "Pitch schicken" — a formal challenge sent straight off a solo
+ * pitch, not from a brand profile. challengedBrandId is always that pitch's
+ * own brand; on acceptance, respondToChallenge below prefills the
+ * challenged side's video from the pitch itself, since it was already
+ * public (see CLAUDE-CODE-UEBERGABE.md §6 — the old "verdeckt" fairness
+ * rule doesn't apply here).
+ */
+export async function sendChallengeFromSoloPitch(
+  _prevState: ChallengeFormState,
+  formData: FormData,
+): Promise<ChallengeFormState> {
+  const user = await requireUser();
+  const soloPitchId = formData.get("soloPitchId");
+  if (typeof soloPitchId !== "string" || !soloPitchId) {
+    return { error: "Ungültige Anfrage." };
+  }
+
+  const myBrand = await getBrandForUser(user.id);
+  if (!myBrand) {
+    return { error: "Du musst zuerst eine Marke erstellen, um einen Pitch zu schicken." };
+  }
+
+  const [pitch] = await db.select().from(soloPitches).where(eq(soloPitches.id, soloPitchId)).limit(1);
+  if (!pitch) {
+    return { error: "Dieser Pitch existiert nicht." };
+  }
+  if (pitch.brandId === myBrand.id) {
+    return { error: "Du kannst deinen eigenen Pitch nicht herausfordern." };
+  }
+
+  const existing = await getLivePendingChallengeBetween(myBrand.id, pitch.brandId);
+  if (existing) {
+    return { error: "Zwischen euch läuft bereits eine offene Einladung." };
+  }
+
+  await db.insert(challenges).values({
+    challengerBrandId: myBrand.id,
+    challengedBrandId: pitch.brandId,
+    soloPitchId: pitch.id,
     status: "pending",
     expiresAt: new Date(Date.now() + CHALLENGE_WINDOW_MS),
   });
@@ -87,7 +135,21 @@ export async function respondToChallenge(_prevState: RespondFormState, formData:
   // live" notification once both sides are in. Deliberately verdeckt: the
   // point is neither side can see (or react to) the other's video before
   // posting their own.
+  //
+  // Phase 13: unless this challenge came from "Pitch schicken" on a solo
+  // pitch (challenge.soloPitchId set) — then the challenged brand's side is
+  // already public, so it's prefilled at creation and only the challenger
+  // (brandA) has to upload. uploadBattleVideo/activateBattleIfBothSidesReady
+  // need no changes for this: a battle with one side already filled behaves
+  // exactly like one where that side uploaded first, same as today.
   if (decision === "accept") {
+    let prefilledBrandBVideo: { brandBVideoUrl: string; brandBSubmittedAt: Date } | Record<string, never> = {};
+    if (challenge.soloPitchId) {
+      const [pitch] = await db.select().from(soloPitches).where(eq(soloPitches.id, challenge.soloPitchId)).limit(1);
+      if (pitch) {
+        prefilledBrandBVideo = { brandBVideoUrl: pitch.videoUrl, brandBSubmittedAt: pitch.createdAt };
+      }
+    }
     await db.insert(battles).values({
       challengeId: challenge.id,
       brandAId: challenge.challengerBrandId,
@@ -95,6 +157,7 @@ export async function respondToChallenge(_prevState: RespondFormState, formData:
       mode: "scheduled",
       category: PITCH_CATEGORY,
       productionDeadline: new Date(Date.now() + PRODUCTION_WINDOW_MS),
+      ...prefilledBrandBVideo,
     });
   }
 

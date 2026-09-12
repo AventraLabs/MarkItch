@@ -1,5 +1,6 @@
 import { getOptionalUser } from "@/lib/session";
-import { getForYouFeed, getFeedDuelById } from "@/lib/feed";
+import { getForYouFeed, getFeedDuelById, getFeedSoloPitchById } from "@/lib/feed";
+import { getBrandForUser } from "@/lib/brand";
 import { FeedClient } from "@/components/feed/feed-client";
 
 // Phase 9: the home screen IS the feed now — full-screen, scrollable,
@@ -8,19 +9,27 @@ import { FeedClient } from "@/components/feed/feed-client";
 // redeploy, and getOptionalUser() already makes this dynamic anyway.
 export const dynamic = "force-dynamic";
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ battle?: string }> }) {
-  const { battle: focusBattleId } = await searchParams;
+export default async function Home({ searchParams }: { searchParams: Promise<{ battle?: string; pitch?: string }> }) {
+  const { battle: focusBattleId, pitch: focusSoloPitchId } = await searchParams;
   const user = await getOptionalUser();
-  const firstPage = await getForYouFeed(user?.id ?? null, 0, 6);
+  const [firstPage, viewerBrand] = await Promise.all([
+    getForYouFeed(user?.id ?? null, 0, 6),
+    user ? getBrandForUser(user.id) : Promise.resolve(null),
+  ]);
 
   // Phase 10: a link from the notifications screen (or a reminder that just
   // went live) opens the Feed already scrolled to that one Pitch — if it
   // didn't happen to land on page 1 of the trending order, fetch it
   // directly and splice it in so FeedClient always has it to scroll to.
+  // Phase 13: same idea for a solo pitch's share link.
   let items = firstPage.items;
-  if (focusBattleId && !items.some((d) => d.battleId === focusBattleId)) {
+  if (focusBattleId && !items.some((i) => i.kind === "duel" && i.battleId === focusBattleId)) {
     const focusDuel = await getFeedDuelById(user?.id ?? null, focusBattleId);
     if (focusDuel) items = [focusDuel, ...items];
+  }
+  if (focusSoloPitchId && !items.some((i) => i.kind === "solo" && i.soloPitchId === focusSoloPitchId)) {
+    const focusPitch = await getFeedSoloPitchById(user?.id ?? null, focusSoloPitchId);
+    if (focusPitch) items = [focusPitch, ...items];
   }
 
   return (
@@ -28,7 +37,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ b
       initialItems={items}
       initialTotal={firstPage.total}
       isLoggedIn={Boolean(user)}
-      focusBattleId={focusBattleId ?? null}
+      viewerBrandId={viewerBrand?.id ?? null}
+      focusBattleId={focusBattleId ?? focusSoloPitchId ?? null}
     />
   );
 }

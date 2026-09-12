@@ -43,5 +43,38 @@ export async function getCommentCounts(battleIds: string[]): Promise<Map<string,
     .from(comments)
     .where(inArray(comments.battleId, battleIds))
     .groupBy(comments.battleId);
-  return new Map(rows.map((row) => [row.battleId, row.n]));
+  return new Map(rows.map((row) => [row.battleId as string, row.n]));
+}
+
+/** Phase 13: same as getCommentsForBattle, keyed on a solo pitch instead. */
+export async function getCommentsForSoloPitch(soloPitchId: string): Promise<CommentWithAuthor[]> {
+  const rows = await db
+    .select({
+      id: comments.id,
+      content: comments.content,
+      createdAt: comments.createdAt,
+      name: users.name,
+      email: users.email,
+    })
+    .from(comments)
+    .innerJoin(users, eq(comments.userId, users.id))
+    .where(eq(comments.soloPitchId, soloPitchId))
+    .orderBy(desc(comments.createdAt));
+
+  return rows.map((row) => ({
+    id: row.id,
+    content: row.content,
+    createdAt: row.createdAt,
+    authorName: row.name || row.email.split("@")[0],
+  }));
+}
+
+export async function getCommentCountsForSoloPitches(soloPitchIds: string[]): Promise<Map<string, number>> {
+  if (soloPitchIds.length === 0) return new Map();
+  const rows = await db
+    .select({ soloPitchId: comments.soloPitchId, n: count() })
+    .from(comments)
+    .where(inArray(comments.soloPitchId, soloPitchIds))
+    .groupBy(comments.soloPitchId);
+  return new Map(rows.map((row) => [row.soloPitchId as string, row.n]));
 }

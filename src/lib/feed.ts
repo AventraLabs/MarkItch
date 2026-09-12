@@ -3,12 +3,14 @@ import { after } from "next/server";
 import { getAllBattles, resolveBattleVideos } from "@/lib/battle";
 import { getBattleStage } from "@/lib/battle-stage";
 import { getVoteTally, getVoteTallyAsOf, getUserVote, type VoteTally } from "@/lib/vote";
-import { getLikeCounts, getUserLikedKeys } from "@/lib/like";
-import { getCommentCounts } from "@/lib/comment";
+import { getLikeCounts, getUserLikedKeys, getSoloPitchLikeCounts, getUserLikedSoloPitchIds } from "@/lib/like";
+import { getCommentCounts, getCommentCountsForSoloPitches } from "@/lib/comment";
 import { getFollowedBrandIds } from "@/lib/follow";
 import { getBrandForUser } from "@/lib/brand";
 import { VOTING_WINDOW_MS } from "@/lib/battle-format";
 import { finalizeAndNotifyBattle } from "@/lib/battle-notify";
+import { getAllSoloPitches } from "@/lib/solo-pitch";
+import { getReactionCounts } from "@/lib/reaction";
 
 // Phase 9.1 — one feed entry per Duell (battle), not per side.
 //
@@ -37,6 +39,7 @@ export type FeedDuelSide = {
 };
 
 export type FeedDuel = {
+  kind: "duel";
   key: string; // battleId — stable across re-fetches
   battleId: string;
   category: string;
@@ -170,6 +173,7 @@ async function buildFeedDuels(viewerId: string | null): Promise<FeedDuel[]> {
     const initialSideIndex: 0 | 1 = followedSet.has(sides[1].brandId) && !followedSet.has(sides[0].brandId) ? 1 : 0;
 
     duels.push({
+      kind: "duel",
       key: battle.id,
       battleId: battle.id,
       category: battle.category,
@@ -195,22 +199,101 @@ async function buildFeedDuels(viewerId: string | null): Promise<FeedDuel[]> {
  * maintain a cached rank that can drift. Small platform, small dataset,
  * this is cheap; a future phase can cache it once that stops being true.
  */
-function trendingScore(duel: FeedDuel): number {
-  const ageHours = Math.max(0, (Date.now() - new Date(duel.activatedAt).getTime()) / (60 * 60 * 1000));
-  const totalLikes = duel.sides[0].likeCount + duel.sides[1].likeCount;
-  const engagement = totalLikes * 1 + duel.commentCount * 1.5 + duel.tally.total * 2;
-  // +1/+2 keep a brand-new, zero-engagement Duell from scoring exactly 0
-  // (so it still surfaces, just low) and from dividing by a near-zero age.
+function scoreFromEngagement(engagement: number, ageHours: number): number {
+  // +1/+2 keep a brand-new, zero-engagement item from scoring exactly 0 (so
+  // it still surfaces, just low) and from dividing by a near-zero age.
   return (engagement + 1) / Math.pow(ageHours + 2, 1.3);
 }
 
-export type FeedPage = { items: FeedDuel[]; total: number };
+function trendingScoreForDuel(duel: FeedDuel): number {
+  const ageHours = Math.max(0, (Date.now() - new Date(duel.activatedAt).getTime()) / (60 * 60 * 1000));
+  const totalLikes = duel.sides[0].likeCount + duel.sides[1].likeCount;
+  const engagement = totalLikes * 1 + duel.commentCount * 1.5 + duel.tally.total * 2;
+  return scoreFromEngagement(engagement, ageHours);
+}
 
-/** "Feed" — every live/finished Duell, ranked by a live trending score. */
+// Phase 13: a solo pitch — every video's starting point, watchable/likable/
+// commentable with no opponent required (see CLAUDE-CODE-UEBERGABE.md §6).
+// `reactionCount` links onward to the reactions sheet (best-liked first,
+// src/lib/reaction.ts); posting a reaction or sending a formal "Pitch
+// schicken" challenge both happen from there, not from feed data itself —
+// keeping this shape cheap to build for a whole feed page.
+export type FeedSoloPitch = {
+  kind: "solo";
+  key: string; // `solo:${soloPitchId}` — stable across re-fetches
+  soloPitchId: string;
+  category: string;
+  brandId: string;
+  brandName: string;
+  brandSlug: string;
+  brandLogoUrl: string | null;
+  videoUrl: string;
+  likeCount: number;
+  viewerLiked: boolean;
+  viewerOwnsThisBrand: boolean;
+  viewerFollowsBrand: boolean;
+  commentCount: number;
+  reactionCount: number;
+  createdAt: string; // ISO
+};
+
+export type FeedItem = FeedDuel | FeedSoloPitch;
+
+function trendingScoreForSolo(pitch: FeedSoloPitch): number {
+  const ageHours = Math.max(0, (Date.now() - new Date(pitch.createdAt).getTime()) / (60 * 60 * 1000));
+  // Reactions weigh heaviest — they're the strongest signal a pitch struck a
+  // nerve (another brand made a whole video about it), likes the lightest.
+  const engagement = pitch.likeCount * 1 + pitch.commentCount * 1.5 + pitch.reactionCount * 3;
+  return scoreFromEngagement(engagement, ageHours);
+}
+
+function trendingScore(item: FeedItem): number {
+  return item.kind === "duel" ? trendingScoreForDuel(item) : trendingScoreForSolo(item);
+}
+
+async function buildFeedSoloPitches(viewerId: string | null): Promise<FeedSoloPitch[]> {
+  const pitches = await getAllSoloPitches();
+  if (pitches.length === 0) return [];
+
+  const ids = pitches.map((p) => p.id);
+  const [likeCounts, commentCounts, reactionCounts, viewerLikedIds, viewerBrand, followedBrandIds] = await Promise.all([
+    getSoloPitchLikeCounts(ids),
+    getCommentCountsForSoloPitches(ids),
+    getReactionCounts(ids),
+    viewerId ? getUserLikedSoloPitchIds(viewerId, ids) : Promise.resolve(new Set<string>()),
+    viewerId ? getBrandForUser(viewerId) : Promise.resolve(null),
+    viewerId ? getFollowedBrandIds(viewerId) : Promise.resolve([]),
+  ]);
+  const followedSet = new Set(followedBrandIds);
+
+  return pitches.map((pitch): FeedSoloPitch => ({
+    kind: "solo",
+    key: `solo:${pitch.id}`,
+    soloPitchId: pitch.id,
+    category: pitch.category,
+    brandId: pitch.brand.id,
+    brandName: pitch.brand.name,
+    brandSlug: pitch.brand.slug,
+    brandLogoUrl: pitch.brand.logoUrl,
+    videoUrl: pitch.videoUrl,
+    likeCount: likeCounts.get(pitch.id) ?? 0,
+    viewerLiked: viewerLikedIds.has(pitch.id),
+    viewerOwnsThisBrand: viewerBrand?.id === pitch.brand.id,
+    viewerFollowsBrand: followedSet.has(pitch.brand.id),
+    commentCount: commentCounts.get(pitch.id) ?? 0,
+    reactionCount: reactionCounts.get(pitch.id) ?? 0,
+    createdAt: pitch.createdAt.toISOString(),
+  }));
+}
+
+export type FeedPage = { items: FeedItem[]; total: number };
+
+/** "Feed" — every live/finished Duell plus every solo pitch, ranked by a shared trending score. */
 export async function getForYouFeed(viewerId: string | null, offset = 0, limit = 6): Promise<FeedPage> {
-  const duels = await buildFeedDuels(viewerId);
-  duels.sort((a, b) => trendingScore(b) - trendingScore(a));
-  return { items: duels.slice(offset, offset + limit), total: duels.length };
+  const [duels, soloPitchItems] = await Promise.all([buildFeedDuels(viewerId), buildFeedSoloPitches(viewerId)]);
+  const items: FeedItem[] = [...duels, ...soloPitchItems];
+  items.sort((a, b) => trendingScore(b) - trendingScore(a));
+  return { items: items.slice(offset, offset + limit), total: items.length };
 }
 
 /**
@@ -224,14 +307,24 @@ export async function getFeedDuelById(viewerId: string | null, battleId: string)
   return duels.find((d) => d.battleId === battleId) ?? null;
 }
 
-/** "Folge ich" — only Duelle where a followed brand is on one of the two sides, newest first. */
+/** Same deep-link purpose as getFeedDuelById, for a solo pitch's share link. */
+export async function getFeedSoloPitchById(viewerId: string | null, soloPitchId: string): Promise<FeedSoloPitch | null> {
+  const items = await buildFeedSoloPitches(viewerId);
+  return items.find((p) => p.soloPitchId === soloPitchId) ?? null;
+}
+
+/** "Folge ich" — Duelle with a followed brand on either side, plus solo pitches from a followed brand, newest first. */
 export async function getFollowingFeed(viewerId: string, offset = 0, limit = 6): Promise<FeedPage> {
   const followedBrandIds = await getFollowedBrandIds(viewerId);
   if (followedBrandIds.length === 0) return { items: [], total: 0 };
   const followedSet = new Set(followedBrandIds);
-  const duels = (await buildFeedDuels(viewerId)).filter(
-    (duel) => followedSet.has(duel.sides[0].brandId) || followedSet.has(duel.sides[1].brandId),
-  );
-  duels.sort((a, b) => new Date(b.activatedAt).getTime() - new Date(a.activatedAt).getTime());
-  return { items: duels.slice(offset, offset + limit), total: duels.length };
+
+  const [duels, soloPitchItems] = await Promise.all([buildFeedDuels(viewerId), buildFeedSoloPitches(viewerId)]);
+  const items: FeedItem[] = [
+    ...duels.filter((duel) => followedSet.has(duel.sides[0].brandId) || followedSet.has(duel.sides[1].brandId)),
+    ...soloPitchItems.filter((pitch) => followedSet.has(pitch.brandId)),
+  ];
+  const recencyOf = (item: FeedItem) => new Date(item.kind === "duel" ? item.activatedAt : item.createdAt).getTime();
+  items.sort((a, b) => recencyOf(b) - recencyOf(a));
+  return { items: items.slice(offset, offset + limit), total: items.length };
 }

@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { FeedDuel, FeedPage } from "@/lib/feed";
+import type { FeedDuel, FeedItem, FeedPage, FeedSoloPitch } from "@/lib/feed";
 import { FeedDuelCard } from "@/components/feed/feed-duel-card";
-import { CommentSheet } from "@/components/feed/comment-sheet";
+import { FeedSoloPitchCard } from "@/components/feed/feed-solo-pitch-card";
+import { CommentSheet, type CommentTarget } from "@/components/feed/comment-sheet";
+import { ReactionsSheet } from "@/components/pitches/reactions-sheet";
 import { getNotificationPermission, subscribeToPush } from "@/lib/push-client";
 
 type Tab = "foryou" | "following";
@@ -12,20 +14,24 @@ export function FeedClient({
   initialItems,
   initialTotal,
   isLoggedIn,
+  viewerBrandId,
   focusBattleId,
 }: {
-  initialItems: FeedDuel[];
+  initialItems: FeedItem[];
   initialTotal: number;
   isLoggedIn: boolean;
+  /** Viewer's own brand id, if they have one — gates "Pitch schicken"/"Hochstufen" without a per-card query. */
+  viewerBrandId?: string | null;
   focusBattleId?: string | null;
 }) {
   const [tab, setTab] = useState<Tab>("foryou");
-  const [items, setItems] = useState<FeedDuel[]>(initialItems);
+  const [items, setItems] = useState<FeedItem[]>(initialItems);
   const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
   const [requiresLogin, setRequiresLogin] = useState(false);
   const [muted, setMuted] = useState(true);
-  const [commentSheetBattleId, setCommentSheetBattleId] = useState<string | null>(null);
+  const [commentTarget, setCommentTarget] = useState<CommentTarget | null>(null);
+  const [reactionsSoloPitchId, setReactionsSoloPitchId] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
 
@@ -72,7 +78,9 @@ export function FeedClient({
   // page.tsx already guaranteed the card is in `initialItems`.
   useEffect(() => {
     if (!focusBattleId) return;
-    const target = document.querySelector(`[data-battle-id="${focusBattleId}"]`);
+    const target =
+      document.querySelector(`[data-battle-id="${focusBattleId}"]`) ??
+      document.querySelector(`[data-solo-pitch-id="${focusBattleId}"]`);
     target?.scrollIntoView({ behavior: "auto", block: "start" });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally once, on mount
   }, []);
@@ -91,17 +99,23 @@ export function FeedClient({
   }, [loadMore]);
 
   function patchDuel(key: string, patch: Partial<FeedDuel>) {
-    setItems((prev) => prev.map((duel) => (duel.key === key ? { ...duel, ...patch } : duel)));
+    setItems((prev) => prev.map((item) => (item.kind === "duel" && item.key === key ? { ...item, ...patch } : item)));
   }
 
   function patchSide(key: string, sideIndex: 0 | 1, patch: Partial<FeedDuel["sides"][number]>) {
     setItems((prev) =>
-      prev.map((duel) => {
-        if (duel.key !== key) return duel;
-        const sides = [...duel.sides] as FeedDuel["sides"];
+      prev.map((item) => {
+        if (item.kind !== "duel" || item.key !== key) return item;
+        const sides = [...item.sides] as FeedDuel["sides"];
         sides[sideIndex] = { ...sides[sideIndex], ...patch };
-        return { ...duel, sides };
+        return { ...item, sides };
       }),
+    );
+  }
+
+  function patchSolo(soloPitchId: string, patch: Partial<FeedSoloPitch>) {
+    setItems((prev) =>
+      prev.map((item) => (item.kind === "solo" && item.soloPitchId === soloPitchId ? { ...item, ...patch } : item)),
     );
   }
 
@@ -166,12 +180,8 @@ export function FeedClient({
     void subscribeToPush();
   }
 
-  function handleShare(duel: FeedDuel) {
-    // Phase 10: /pitches/[id] is only the awaiting-videos waiting room now
-    // — a live Duell only exists in the Feed, so that's what a share link
-    // has to point at.
-    const url = `${window.location.origin}/?battle=${duel.battleId}`;
-    const shareData = { title: `${duel.sides[0].brandName} vs. ${duel.sides[1].brandName} auf Market Matcher`, url };
+  function shareUrl(url: string, title: string) {
+    const shareData = { title, url };
     if (navigator.share) {
       navigator.share(shareData).catch(() => {});
     } else if (navigator.clipboard) {
@@ -179,10 +189,51 @@ export function FeedClient({
     }
   }
 
-  function handleCommentPosted(battleId: string) {
-    setItems((prev) =>
-      prev.map((duel) => (duel.battleId === battleId ? { ...duel, commentCount: duel.commentCount + 1 } : duel)),
+  function handleShare(duel: FeedDuel) {
+    // Phase 10: /pitches/[id] is only the awaiting-videos waiting room now
+    // — a live Duell only exists in the Feed, so that's what a share link
+    // has to point at.
+    shareUrl(
+      `${window.location.origin}/?battle=${duel.battleId}`,
+      `${duel.sides[0].brandName} vs. ${duel.sides[1].brandName} auf Market Matcher`,
     );
+  }
+
+  function handleShareSolo(pitch: FeedSoloPitch) {
+    shareUrl(`${window.location.origin}/?pitch=${pitch.soloPitchId}`, `${pitch.brandName} auf Market Matcher`);
+  }
+
+  async function handleToggleLikeSolo(pitch: FeedSoloPitch) {
+    patchSolo(pitch.soloPitchId, { viewerLiked: !pitch.viewerLiked, likeCount: pitch.likeCount + (pitch.viewerLiked ? -1 : 1) });
+    try {
+      const res = await fetch("/api/pitches/like", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ soloPitchId: pitch.soloPitchId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        patchSolo(pitch.soloPitchId, { viewerLiked: data.liked, likeCount: data.count });
+      } else {
+        patchSolo(pitch.soloPitchId, { viewerLiked: pitch.viewerLiked, likeCount: pitch.likeCount });
+      }
+    } catch {
+      patchSolo(pitch.soloPitchId, { viewerLiked: pitch.viewerLiked, likeCount: pitch.likeCount });
+    }
+  }
+
+  function handleCommentPosted(id: string) {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.kind === "duel" && item.battleId === id) return { ...item, commentCount: item.commentCount + 1 };
+        if (item.kind === "solo" && item.soloPitchId === id) return { ...item, commentCount: item.commentCount + 1 };
+        return item;
+      }),
+    );
+  }
+
+  function handleReactionCountChange(soloPitchId: string, count: number) {
+    patchSolo(soloPitchId, { reactionCount: count });
   }
 
   const showEmptyFollowing = tab === "following" && !loading && items.length === 0;
@@ -210,26 +261,41 @@ export function FeedClient({
       </div>
 
       <div className="h-full w-full snap-y snap-mandatory overflow-y-scroll">
-        {items.map((duel) => (
-          <FeedDuelCard
-            key={duel.key}
-            duel={duel}
-            isLoggedIn={isLoggedIn}
-            muted={muted}
-            onToggleMute={() => setMuted((m) => !m)}
-            onToggleLike={handleToggleLike}
-            onVote={handleVote}
-            onOpenComments={setCommentSheetBattleId}
-            onShare={handleShare}
-          />
-        ))}
+        {items.map((item) =>
+          item.kind === "duel" ? (
+            <FeedDuelCard
+              key={item.key}
+              duel={item}
+              isLoggedIn={isLoggedIn}
+              muted={muted}
+              onToggleMute={() => setMuted((m) => !m)}
+              onToggleLike={handleToggleLike}
+              onVote={handleVote}
+              onOpenComments={(battleId) => setCommentTarget({ kind: "battle", id: battleId })}
+              onShare={handleShare}
+            />
+          ) : (
+            <FeedSoloPitchCard
+              key={item.key}
+              pitch={item}
+              isLoggedIn={isLoggedIn}
+              viewerHasOtherBrand={Boolean(viewerBrandId && viewerBrandId !== item.brandId)}
+              muted={muted}
+              onToggleMute={() => setMuted((m) => !m)}
+              onToggleLike={handleToggleLikeSolo}
+              onOpenComments={(soloPitchId) => setCommentTarget({ kind: "solo", id: soloPitchId })}
+              onOpenReactions={setReactionsSoloPitchId}
+              onShare={handleShareSolo}
+            />
+          ),
+        )}
         <div ref={sentinelRef} className="h-1 w-full" />
 
         {items.length === 0 && !loading && !showEmptyFollowing && (
           <div className="flex h-dvh w-full flex-col items-center justify-center px-8 text-center">
             <p className="text-lg font-semibold text-white">Noch keine Pitches</p>
             <p className="mt-2 text-sm text-zinc-400">
-              Sobald beide Seiten eines Pitches live sind, tauchen sie hier auf.
+              Sobald jemand einen Solo-Pitch postet oder ein Duell live geht, taucht es hier auf.
             </p>
           </div>
         )}
@@ -254,14 +320,31 @@ export function FeedClient({
         )}
       </div>
 
-      {commentSheetBattleId && (
+      {commentTarget && (
         <CommentSheet
-          battleId={commentSheetBattleId}
+          target={commentTarget}
           isLoggedIn={isLoggedIn}
-          onClose={() => setCommentSheetBattleId(null)}
+          onClose={() => setCommentTarget(null)}
           onCommentPosted={handleCommentPosted}
         />
       )}
+
+      {reactionsSoloPitchId &&
+        (() => {
+          const pitch = items.find((i) => i.kind === "solo" && i.soloPitchId === reactionsSoloPitchId) as
+            | FeedSoloPitch
+            | undefined;
+          return (
+            <ReactionsSheet
+              soloPitchId={reactionsSoloPitchId}
+              isLoggedIn={isLoggedIn}
+              canPostReaction={Boolean(viewerBrandId && pitch && viewerBrandId !== pitch.brandId)}
+              canPromote={Boolean(viewerBrandId && pitch && viewerBrandId === pitch.brandId)}
+              onClose={() => setReactionsSoloPitchId(null)}
+              onReactionCountChange={handleReactionCountChange}
+            />
+          );
+        })()}
     </div>
   );
 }

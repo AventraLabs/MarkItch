@@ -13,6 +13,8 @@ import { VideoPlayer } from "@/components/brand/video-player";
 import { IncomingChallengeList, OutgoingChallengeList } from "@/components/challenge/challenge-list";
 import { getIncomingChallenges, getOutgoingChallenges } from "@/lib/challenge";
 import { getUnreadNotificationCount } from "@/lib/notification";
+import { SoloPitchUploadForm } from "@/components/pitches/solo-pitch-upload-form";
+import { getSoloPitchesForBrand } from "@/lib/solo-pitch";
 
 // This page reads challenges, notifications etc. below via requireUser()
 // -> auth() (cookies), so it's already dynamic — no explicit flag needed.
@@ -21,10 +23,11 @@ export default async function ProfilePage() {
   const sessionUser = await requireUser();
   const [user] = await db.select().from(users).where(eq(users.id, sessionUser.id)).limit(1);
   const brand = await getBrandForUser(sessionUser.id);
-  const [incomingChallenges, outgoingChallenges, unreadCount] = await Promise.all([
+  const [incomingChallenges, outgoingChallenges, unreadCount, mySoloPitches] = await Promise.all([
     brand ? getIncomingChallenges(brand.id) : Promise.resolve([]),
     brand ? getOutgoingChallenges(brand.id) : Promise.resolve([]),
     getUnreadNotificationCount(sessionUser.id),
+    brand ? getSoloPitchesForBrand(brand.id) : Promise.resolve([]),
   ]);
 
   if (!user) {
@@ -140,6 +143,26 @@ export default async function ProfilePage() {
             </div>
           )}
           <VideoUploadForm hasVideo={Boolean(brand.videoUrl)} />
+        </div>
+      )}
+
+      {brand && (
+        <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
+          <h2 className="mb-4 text-lg font-semibold text-white">Solo-Pitches</h2>
+          <p className="mb-4 text-sm text-zinc-400">
+            Ein Solo-Pitch braucht keinen Gegner — er läuft sofort im Feed, andere Marken können jederzeit mit einer
+            Reaktion antworten oder dich direkt herausfordern.
+          </p>
+          {mySoloPitches.length > 0 && (
+            <ul className="mb-4 space-y-2">
+              {mySoloPitches.map((pitch) => (
+                <li key={pitch.id} className="max-w-[200px]">
+                  <VideoPlayer src={pitch.videoUrl} />
+                </li>
+              ))}
+            </ul>
+          )}
+          <SoloPitchUploadForm />
         </div>
       )}
 

@@ -111,6 +111,12 @@ export const challenges = pgTable(
     challengedBrandId: uuid("challenged_brand_id")
       .notNull()
       .references(() => brands.id, { onDelete: "cascade" }),
+    // Phase 13: set when this challenge was sent via "Pitch schicken" on a
+    // solo pitch rather than from a brand profile — challengedBrandId is
+    // always that solo pitch's own brand. Read only at acceptance time (see
+    // respondToChallenge): the challenged brand already has a video (the
+    // solo pitch itself), so only the challenger needs to produce one.
+    soloPitchId: uuid("solo_pitch_id").references(() => soloPitches.id, { onDelete: "cascade" }),
     // 'pending' | 'accepted' | 'declined' — expiry is derived, not stored,
     // except we flip a pending row to 'expired' the next time it's touched
     // (respondToChallenge) so a stale row doesn't look actionable forever.
@@ -272,11 +278,15 @@ export type NewVote = typeof votes.$inferInsert;
 // edge, see README). Anyone signed in can comment, including a Pitch's own
 // Acros — this is a discussion thread, not a vote, so there's no
 // self-comment restriction like there is for votes.
+// Phase 13: battleId became nullable and soloPitchId was added so a comment
+// can also live under a solo pitch — exactly one of the two is set (same
+// app-level-only enforcement as `likes` above). Reactions don't get their
+// own comment thread in this phase — they're a video reacting to the pitch,
+// discussion stays on the pitch itself.
 export const comments = pgTable("comments", {
   id: uuid("id").primaryKey().defaultRandom(),
-  battleId: uuid("battle_id")
-    .notNull()
-    .references(() => battles.id, { onDelete: "cascade" }),
+  battleId: uuid("battle_id").references(() => battles.id, { onDelete: "cascade" }),
+  soloPitchId: uuid("solo_pitch_id").references(() => soloPitches.id, { onDelete: "cascade" }),
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
@@ -294,22 +304,40 @@ export type NewComment = typeof comments.$inferInsert;
 // per-video reaction like TikTok's heart, a vote is the one-per-battle
 // "who wins this Pitch" decision — a viewer can like both sides but can
 // only vote for one.
+// Phase 13: battleId became nullable and soloPitchId/reactionId were added
+// so a like can also target a solo pitch or a reaction — exactly one of the
+// three is ever set (enforced in app code, e.g. toggleLikeForUser vs.
+// toggleSoloPitchLikeForUser/toggleReactionLikeForUser in src/lib/like.ts;
+// no DB-level CHECK constraint, same style as the rest of this file). Kept
+// as one table rather than three, since it's still the exact same "one
+// heart per user per thing" concept — only what it points at changed.
 export const likes = pgTable(
   "likes",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    battleId: uuid("battle_id")
-      .notNull()
-      .references(() => battles.id, { onDelete: "cascade" }),
+    battleId: uuid("battle_id").references(() => battles.id, { onDelete: "cascade" }),
+    // Always required, even for a solo-pitch/reaction like — it's the
+    // video's own brand, denormalized so this column can stay NOT NULL
+    // instead of widening nullability further.
     brandId: uuid("brand_id")
       .notNull()
       .references(() => brands.id, { onDelete: "cascade" }),
+    soloPitchId: uuid("solo_pitch_id").references(() => soloPitches.id, { onDelete: "cascade" }),
+    reactionId: uuid("reaction_id").references(() => reactions.id, { onDelete: "cascade" }),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("likes_battle_brand_user_unique_idx").on(table.battleId, table.brandId, table.userId)],
+  (table) => [
+    uniqueIndex("likes_battle_brand_user_unique_idx").on(table.battleId, table.brandId, table.userId),
+    uniqueIndex("likes_solo_pitch_user_unique_idx")
+      .on(table.soloPitchId, table.userId)
+      .where(sql`${table.soloPitchId} is not null`),
+    uniqueIndex("likes_reaction_user_unique_idx")
+      .on(table.reactionId, table.userId)
+      .where(sql`${table.reactionId} is not null`),
+  ],
 );
 
 export type Like = typeof likes.$inferSelect;
@@ -359,3 +387,48 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
 
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;
+
+// Phase 13: solo pitches. A video posted without an opponent — every video
+// starts life as one of these, viewable/likable/commentable on its own, no
+// battle required. Deliberately its own table rather than a one-sided
+// `battles` row: keeps battle-stage.ts's two-sided assumptions (winner,
+// walkover, no-show) untouched, since a solo pitch never has a "stage" in
+// that sense at all.
+export const soloPitches = pgTable("solo_pitches", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  brandId: uuid("brand_id")
+    .notNull()
+    .references(() => brands.id, { onDelete: "cascade" }),
+  videoUrl: text("video_url").notNull(),
+  category: text("category").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type SoloPitch = typeof soloPitches.$inferSelect;
+export type NewSoloPitch = typeof soloPitches.$inferInsert;
+
+// Phase 13: reactions. Any brand can post one reaction video per solo pitch,
+// no permission needed — never on a battle side (only on a solo pitch, see
+// CLAUDE-CODE-UEBERGABE.md §6). `promotedToBattleId` is set once the solo
+// pitch's own brand "hochstuft" this reaction into an official Duell — kept
+// on the reaction rather than inferred, so the UI can show "already a
+// Duell" without re-deriving it.
+export const reactions = pgTable(
+  "reactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    soloPitchId: uuid("solo_pitch_id")
+      .notNull()
+      .references(() => soloPitches.id, { onDelete: "cascade" }),
+    brandId: uuid("brand_id")
+      .notNull()
+      .references(() => brands.id, { onDelete: "cascade" }),
+    videoUrl: text("video_url").notNull(),
+    promotedToBattleId: uuid("promoted_to_battle_id").references(() => battles.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("reactions_solo_pitch_brand_unique_idx").on(table.soloPitchId, table.brandId)],
+);
+
+export type Reaction = typeof reactions.$inferSelect;
+export type NewReaction = typeof reactions.$inferInsert;

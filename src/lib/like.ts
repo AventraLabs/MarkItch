@@ -19,7 +19,10 @@ export async function getLikeCounts(keys: LikeKey[]): Promise<Map<string, number
     .where(inArray(likes.battleId, battleIds))
     .groupBy(likes.battleId, likes.brandId);
   const map = new Map<string, number>();
-  for (const row of rows) map.set(keyOf(row.battleId, row.brandId), row.n);
+  // battleId is nullable at the schema level (Phase 13: solo-pitch/reaction
+  // likes share this table) but never null here — the WHERE clause only
+  // ever matches battle-side rows.
+  for (const row of rows) map.set(keyOf(row.battleId!, row.brandId), row.n);
   return map;
 }
 
@@ -31,7 +34,7 @@ export async function getUserLikedKeys(userId: string, keys: LikeKey[]): Promise
     .select({ battleId: likes.battleId, brandId: likes.brandId })
     .from(likes)
     .where(and(eq(likes.userId, userId), inArray(likes.battleId, battleIds)));
-  return new Set(rows.map((row) => keyOf(row.battleId, row.brandId)));
+  return new Set(rows.map((row) => keyOf(row.battleId!, row.brandId)));
 }
 
 export async function getLikeCount(battleId: string, brandId: string): Promise<number> {
@@ -62,4 +65,77 @@ export async function toggleLikeForUser(
   // double-insert — the unique index is the real backstop.
   await db.insert(likes).values({ battleId, brandId, userId }).onConflictDoNothing();
   return { liked: true };
+}
+
+// Phase 13: solo-pitch and reaction likes — same "one heart per user per
+// thing" concept as toggleLikeForUser above, just keyed on soloPitchId/
+// reactionId instead of (battleId, brandId). Two small functions rather
+// than generalizing toggleLikeForUser's signature: the battle-side case is
+// keyed by a compound (battleId, brandId), these by a single id, and
+// forcing one shape onto both would need an awkward discriminated union for
+// no real gain — see likes_solo_pitch_user_unique_idx / _reaction_ in
+// schema.ts for the constraints backing this.
+
+export async function getSoloPitchLikeCount(soloPitchId: string): Promise<number> {
+  const [row] = await db.select({ n: count() }).from(likes).where(eq(likes.soloPitchId, soloPitchId));
+  return row?.n ?? 0;
+}
+
+export async function getSoloPitchLikeCounts(soloPitchIds: string[]): Promise<Map<string, number>> {
+  if (soloPitchIds.length === 0) return new Map();
+  const rows = await db
+    .select({ soloPitchId: likes.soloPitchId, n: count() })
+    .from(likes)
+    .where(inArray(likes.soloPitchId, soloPitchIds))
+    .groupBy(likes.soloPitchId);
+  return new Map(rows.map((r) => [r.soloPitchId as string, r.n]));
+}
+
+export async function getUserLikedSoloPitchIds(userId: string, soloPitchIds: string[]): Promise<Set<string>> {
+  if (soloPitchIds.length === 0) return new Set();
+  const rows = await db
+    .select({ soloPitchId: likes.soloPitchId })
+    .from(likes)
+    .where(and(eq(likes.userId, userId), inArray(likes.soloPitchId, soloPitchIds)));
+  return new Set(rows.map((r) => r.soloPitchId as string));
+}
+
+export async function toggleSoloPitchLikeForUser(
+  userId: string,
+  soloPitchId: string,
+  brandId: string,
+): Promise<{ liked: boolean; count: number }> {
+  const [existing] = await db
+    .select({ id: likes.id })
+    .from(likes)
+    .where(and(eq(likes.userId, userId), eq(likes.soloPitchId, soloPitchId)))
+    .limit(1);
+
+  if (existing) {
+    await db.delete(likes).where(eq(likes.id, existing.id));
+  } else {
+    await db.insert(likes).values({ soloPitchId, brandId, userId }).onConflictDoNothing();
+  }
+  const likeCount = await getSoloPitchLikeCount(soloPitchId);
+  return { liked: !existing, count: likeCount };
+}
+
+export async function toggleReactionLikeForUser(
+  userId: string,
+  reactionId: string,
+  brandId: string,
+): Promise<{ liked: boolean; count: number }> {
+  const [existing] = await db
+    .select({ id: likes.id })
+    .from(likes)
+    .where(and(eq(likes.userId, userId), eq(likes.reactionId, reactionId)))
+    .limit(1);
+
+  if (existing) {
+    await db.delete(likes).where(eq(likes.id, existing.id));
+  } else {
+    await db.insert(likes).values({ reactionId, brandId, userId }).onConflictDoNothing();
+  }
+  const [row] = await db.select({ n: count() }).from(likes).where(eq(likes.reactionId, reactionId));
+  return { liked: !existing, count: row?.n ?? 0 };
 }

@@ -15,25 +15,35 @@ function timeAgo(iso: string): string {
 
 type CommentRow = Omit<CommentWithAuthor, "createdAt"> & { createdAt: string };
 
+// Phase 13: a comment thread now hangs off either a battle or a solo pitch
+// — same UI, different endpoint/body key. `target` carries both the kind
+// and the id so this component (and its one caller-visible id, used for
+// onCommentPosted) stays a single source of truth instead of two near-
+// identical components.
+export type CommentTarget = { kind: "battle"; id: string } | { kind: "solo"; id: string };
+
 export function CommentSheet({
-  battleId,
+  target,
   isLoggedIn,
   onClose,
   onCommentPosted,
 }: {
-  battleId: string;
+  target: CommentTarget;
   isLoggedIn: boolean;
   onClose: () => void;
-  onCommentPosted: (battleId: string) => void;
+  onCommentPosted: (id: string) => void;
 }) {
   const [comments, setComments] = useState<CommentRow[] | null>(null);
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
 
+  const endpoint = target.kind === "battle" ? "/api/feed/comments" : "/api/pitches/comments";
+  const idParam = target.kind === "battle" ? "battleId" : "soloPitchId";
+
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/feed/comments?battleId=${battleId}`)
+    fetch(`${endpoint}?${idParam}=${target.id}`)
       .then((res) => res.json())
       .then((data) => {
         if (!cancelled) setComments(data.comments ?? []);
@@ -44,7 +54,8 @@ export function CommentSheet({
     return () => {
       cancelled = true;
     };
-  }, [battleId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- endpoint/idParam are derived from target.kind, re-runs whenever target.id does
+  }, [target.id]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -52,10 +63,10 @@ export function CommentSheet({
     setPosting(true);
     setError(null);
     try {
-      const res = await fetch("/api/feed/comments", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ battleId, content }),
+        body: JSON.stringify({ [idParam]: target.id, content }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -64,7 +75,7 @@ export function CommentSheet({
       }
       setComments(data.comments ?? []);
       setContent("");
-      onCommentPosted(battleId);
+      onCommentPosted(target.id);
     } catch {
       setError("Kommentar konnte nicht gespeichert werden.");
     } finally {
