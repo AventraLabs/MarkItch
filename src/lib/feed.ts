@@ -239,18 +239,6 @@ export type FeedSoloPitch = {
 
 export type FeedItem = FeedDuel | FeedSoloPitch;
 
-function trendingScoreForSolo(pitch: FeedSoloPitch): number {
-  const ageHours = Math.max(0, (Date.now() - new Date(pitch.createdAt).getTime()) / (60 * 60 * 1000));
-  // Reactions weigh heaviest — they're the strongest signal a pitch struck a
-  // nerve (another brand made a whole video about it), likes the lightest.
-  const engagement = pitch.likeCount * 1 + pitch.commentCount * 1.5 + pitch.reactionCount * 3;
-  return scoreFromEngagement(engagement, ageHours);
-}
-
-function trendingScore(item: FeedItem): number {
-  return item.kind === "duel" ? trendingScoreForDuel(item) : trendingScoreForSolo(item);
-}
-
 async function buildFeedSoloPitches(viewerId: string | null): Promise<FeedSoloPitch[]> {
   const pitches = await getAllSoloPitches();
   if (pitches.length === 0) return [];
@@ -288,11 +276,43 @@ async function buildFeedSoloPitches(viewerId: string | null): Promise<FeedSoloPi
 
 export type FeedPage = { items: FeedItem[]; total: number };
 
-/** "Feed" — every live/finished Duell plus every solo pitch, ranked by a shared trending score. */
+// Phase 21: a blended single trending score (see git history) quietly
+// buried solo pitches — a Duell's vote count (weighted ×2, and
+// accumulating over its whole week-long voting window) almost always
+// outscores even a brand-new solo pitch, so "the feed IS the newest
+// videos" stopped being true for solo content, contradicting the whole
+// point of Solo-Pitch (§6 of CLAUDE-CODE-UEBERGABE.md: TikTok/Reels-style,
+// newest posts first). Duels keep competing among themselves by trending
+// score (that mechanic is fine on its own), but solo pitches are sorted
+// purely by recency and then interleaved at a fixed cadence instead of
+// competing on the same score — guarantees a fresh solo pitch actually
+// surfaces instead of losing to an old, vote-heavy Duell.
+const SOLO_INTERLEAVE_EVERY = 3;
+
+function interleaveFeed(duels: FeedDuel[], soloPitchItems: FeedSoloPitch[]): FeedItem[] {
+  const rankedDuels = [...duels].sort((a, b) => trendingScoreForDuel(b) - trendingScoreForDuel(a));
+  const freshSolos = [...soloPitchItems].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const merged: FeedItem[] = [];
+  let duelIdx = 0;
+  let soloIdx = 0;
+  while (duelIdx < rankedDuels.length || soloIdx < freshSolos.length) {
+    const nextIsSoloSlot = (merged.length + 1) % SOLO_INTERLEAVE_EVERY === 0;
+    if (nextIsSoloSlot && soloIdx < freshSolos.length) {
+      merged.push(freshSolos[soloIdx++]);
+    } else if (duelIdx < rankedDuels.length) {
+      merged.push(rankedDuels[duelIdx++]);
+    } else {
+      merged.push(freshSolos[soloIdx++]);
+    }
+  }
+  return merged;
+}
+
+/** "Feed" — every live/finished Duell plus every solo pitch; solo pitches are interleaved by recency, see interleaveFeed. */
 export async function getForYouFeed(viewerId: string | null, offset = 0, limit = 6): Promise<FeedPage> {
   const [duels, soloPitchItems] = await Promise.all([buildFeedDuels(viewerId), buildFeedSoloPitches(viewerId)]);
-  const items: FeedItem[] = [...duels, ...soloPitchItems];
-  items.sort((a, b) => trendingScore(b) - trendingScore(a));
+  const items = interleaveFeed(duels, soloPitchItems);
   return { items: items.slice(offset, offset + limit), total: items.length };
 }
 

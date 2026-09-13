@@ -14,17 +14,23 @@ import { VideoPlayer } from "@/components/brand/video-player";
 import { IncomingChallengeList, OutgoingChallengeList } from "@/components/challenge/challenge-list";
 import { getIncomingChallenges, getOutgoingChallenges } from "@/lib/challenge";
 import { getUnreadNotificationCount } from "@/lib/notification";
-import { SoloPitchUploadForm } from "@/components/pitches/solo-pitch-upload-form";
 import { getSoloPitchesForBrand } from "@/lib/solo-pitch";
-import { StartCastingForm } from "@/components/casting/start-casting-form";
 import { getActiveCastingForBrand, getWonCastingsForBrand } from "@/lib/casting";
-import { CreatorVideoUploadForm } from "@/components/creator-charts/creator-video-upload-form";
-import { brands as brandsTable } from "@/db/schema";
-import { ne } from "drizzle-orm";
 
 // This page reads challenges, notifications etc. below via requireUser()
 // -> auth() (cookies), so it's already dynamic — no explicit flag needed.
 
+/**
+ * Phase 21: this page went on a diet — it used to also carry three upload
+ * forms (Solo-Pitch, Creator-Video, Partner-Casting-start), which doesn't
+ * match how a profile page works anywhere else (bio + what you've posted,
+ * not where you post from) — see the new "+" tab / src/app/post/page.tsx
+ * for where those moved. What's left here is identity (your account, your
+ * brand) and status (what's running, what you've won/sent/received) —
+ * displays and links, not creation forms, with one deliberate exception:
+ * CreateBrandForm stays, since setting up your brand identity is itself an
+ * identity action, not "a post".
+ */
 export default async function ProfilePage() {
   const sessionUser = await requireUser();
   const [user] = await db.select().from(users).where(eq(users.id, sessionUser.id)).limit(1);
@@ -38,18 +44,14 @@ export default async function ProfilePage() {
   }
 
   const brand = await getBrandForUser(sessionUser.id);
-  const [incomingChallenges, outgoingChallenges, unreadCount, mySoloPitches, activeCasting, wonCastings, otherBrands] =
-    await Promise.all([
-      brand ? getIncomingChallenges(brand.id) : Promise.resolve([]),
-      brand ? getOutgoingChallenges(brand.id) : Promise.resolve([]),
-      getUnreadNotificationCount(sessionUser.id),
-      brand ? getSoloPitchesForBrand(brand.id) : Promise.resolve([]),
-      brand ? getActiveCastingForBrand(brand.id) : Promise.resolve(null),
-      brand ? getWonCastingsForBrand(brand.id) : Promise.resolve([]),
-      brand
-        ? db.select({ id: brandsTable.id, name: brandsTable.name }).from(brandsTable).where(ne(brandsTable.id, brand.id))
-        : Promise.resolve([]),
-    ]);
+  const [incomingChallenges, outgoingChallenges, unreadCount, mySoloPitches, activeCasting, wonCastings] = await Promise.all([
+    brand ? getIncomingChallenges(brand.id) : Promise.resolve([]),
+    brand ? getOutgoingChallenges(brand.id) : Promise.resolve([]),
+    getUnreadNotificationCount(sessionUser.id),
+    brand ? getSoloPitchesForBrand(brand.id) : Promise.resolve([]),
+    brand ? getActiveCastingForBrand(brand.id) : Promise.resolve(null),
+    brand ? getWonCastingsForBrand(brand.id) : Promise.resolve([]),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-16">
@@ -168,44 +170,31 @@ export default async function ProfilePage() {
 
       {brand && (
         <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">Solo-Pitches</h2>
-          <p className="mb-4 text-sm text-zinc-400">
-            Ein Solo-Pitch braucht keinen Gegner — er läuft sofort im Feed, andere Marken können jederzeit mit einer
-            Reaktion antworten oder dich direkt herausfordern.
-          </p>
-          {mySoloPitches.length > 0 && (
-            <ul className="mb-4 space-y-2">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">Meine Solo-Pitches</h2>
+            <Link href="/post" className="text-sm text-orange-500 hover:underline">
+              + Neu posten
+            </Link>
+          </div>
+          {mySoloPitches.length > 0 ? (
+            <ul className="grid grid-cols-3 gap-2">
               {mySoloPitches.map((pitch) => (
-                <li key={pitch.id} className="max-w-[200px]">
+                <li key={pitch.id}>
                   <VideoPlayer src={pitch.videoUrl} />
                 </li>
               ))}
             </ul>
+          ) : (
+            <p className="text-sm text-zinc-500">Noch nichts gepostet.</p>
           )}
-          <SoloPitchUploadForm />
-        </div>
-      )}
-
-      {brand && otherBrands.length > 0 && (
-        <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">Creator-Video posten</h2>
-          <p className="mb-4 text-sm text-zinc-400">
-            Postest du sowieso Promo-Videos für eine Marke, mit der du zusammenarbeitest? Lade sie hier hoch — die
-            Community stimmt monatlich über das beste Video pro Marke ab.
-          </p>
-          <CreatorVideoUploadForm brands={otherBrands} />
         </div>
       )}
 
       {brand && (
         <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">Partner-Casting (neue Partner finden)</h2>
-          <p className="mb-4 text-sm text-zinc-400">
-            Suche einen neuen Markenpartner: andere Marken reichen ein Video ein, die Community stimmt ab, wer
-            gewinnt wird dein offizieller Partner.
-          </p>
+          <h2 className="mb-4 text-lg font-semibold text-white">Partner-Casting</h2>
           {wonCastings.length > 0 && (
-            <p className="mb-4 text-sm text-orange-400">
+            <p className="mb-3 text-sm text-orange-400">
               🏆 {brand.name} ist offizieller Partner bei {wonCastings.length} {wonCastings.length === 1 ? "Casting" : "Castings"}.
             </p>
           )}
@@ -214,7 +203,9 @@ export default async function ProfilePage() {
               Läuft: „{activeCasting.prompt}“ ansehen →
             </Link>
           ) : (
-            <StartCastingForm />
+            <Link href="/post" className="text-sm text-orange-500 hover:underline">
+              + Neues Casting starten
+            </Link>
           )}
         </div>
       )}

@@ -1,0 +1,98 @@
+import Link from "next/link";
+import { eq, ne } from "drizzle-orm";
+import { db } from "@/db";
+import { users, brands } from "@/db/schema";
+import { requireUser } from "@/lib/session";
+import { getBrandForUser } from "@/lib/brand";
+import { getBattlesForBrand, resolveBattleVideos } from "@/lib/battle";
+import { getBattleStage } from "@/lib/battle-stage";
+import { getActiveCastingForBrand } from "@/lib/casting";
+import { CreateBrandForm } from "@/components/brand/create-brand-form";
+import { PostTypePicker } from "@/components/post/post-type-picker";
+
+// This page reads the session via requireUser() -> auth() (cookies), so
+// it's already dynamic — no explicit flag needed, same as /profile.
+
+/**
+ * Phase 21: the single entry point for posting anything — Solo-Pitch,
+ * Creator-Video, or starting a Partner-Casting. Used to be three separate
+ * upload forms buried inside /profile, which doesn't match how any actual
+ * app works (Profil should show who you are and what you've posted, not
+ * hide the "post" action inside a settings-like page) — see chat
+ * 2026-09-14 / CLAUDE-CODE-UEBERGABE.md for the reasoning. Reached via the
+ * "+" tab in the bottom nav, TikTok/Instagram-style.
+ */
+export default async function PostPage() {
+  const sessionUser = await requireUser();
+  const [user] = await db.select().from(users).where(eq(users.id, sessionUser.id)).limit(1);
+  const brand = await getBrandForUser(sessionUser.id);
+
+  if (!brand) {
+    return (
+      <div className="mx-auto w-full max-w-lg flex-1 px-4 py-16">
+        <h1 className="mb-6 text-2xl font-bold text-white">Posten</h1>
+        {user?.accountType === "acro" ? (
+          <>
+            <p className="mb-6 text-sm text-zinc-400">Leg zuerst deine Marke an, dann kannst du posten.</p>
+            <CreateBrandForm />
+          </>
+        ) : (
+          <p className="text-sm text-zinc-400">
+            Als Assent schaust du zu, folgst und stimmst ab — Posten ist Marken (Acro-Accounts) vorbehalten.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  const [otherBrandRows, activeCasting, myBattles] = await Promise.all([
+    db.select({ id: brands.id, name: brands.name }).from(brands).where(ne(brands.id, brand.id)),
+    getActiveCastingForBrand(brand.id),
+    getBattlesForBrand(brand.id),
+  ]);
+
+  // Battles where this brand accepted a challenge (or is countering) but
+  // hasn't uploaded its own side yet — easy to forget since that upload
+  // otherwise only lives on /pitches/[id]'s waiting room.
+  const pendingBattles = myBattles.filter((b) => {
+    const { videoUrlA, videoUrlB } = resolveBattleVideos(b);
+    const stage = getBattleStage({
+      brandAId: b.brandAId,
+      brandBId: b.brandBId,
+      hasVideoA: Boolean(videoUrlA),
+      hasVideoB: Boolean(videoUrlB),
+      productionDeadline: b.productionDeadline,
+      votingEndsAt: b.votingEndsAt,
+    });
+    return stage.stage === "awaiting_videos" && stage.waitingOnBrandIds.includes(brand.id);
+  });
+
+  return (
+    <div className="mx-auto w-full max-w-lg flex-1 px-4 py-16">
+      <h1 className="mb-6 text-2xl font-bold text-white">Posten</h1>
+
+      {pendingBattles.length > 0 && (
+        <div className="mb-6 rounded-lg border border-orange-500/40 bg-orange-500/10 p-4">
+          <p className="mb-2 text-sm text-orange-300">Dein Video für ein Duell fehlt noch:</p>
+          <ul className="space-y-1">
+            {pendingBattles.map((b) => {
+              const opponent = b.brandAId === brand.id ? b.brandB : b.brandA;
+              return (
+                <li key={b.id}>
+                  <Link href={`/pitches/${b.id}`} className="text-sm font-semibold text-orange-400 hover:underline">
+                    vs. {opponent.name} — Video hochladen →
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      <PostTypePicker
+        otherBrands={otherBrandRows}
+        activeCasting={activeCasting ? { id: activeCasting.id, prompt: activeCasting.prompt } : null}
+      />
+    </div>
+  );
+}
