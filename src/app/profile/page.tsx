@@ -16,6 +16,8 @@ import { getIncomingChallenges, getOutgoingChallenges } from "@/lib/challenge";
 import { getUnreadNotificationCount } from "@/lib/notification";
 import { SoloPitchUploadForm } from "@/components/pitches/solo-pitch-upload-form";
 import { getSoloPitchesForBrand } from "@/lib/solo-pitch";
+import { StartCastingForm } from "@/components/casting/start-casting-form";
+import { getActiveCastingForBrand, getWonCastingsForBrand } from "@/lib/casting";
 
 // This page reads challenges, notifications etc. below via requireUser()
 // -> auth() (cookies), so it's already dynamic — no explicit flag needed.
@@ -33,11 +35,13 @@ export default async function ProfilePage() {
   }
 
   const brand = await getBrandForUser(sessionUser.id);
-  const [incomingChallenges, outgoingChallenges, unreadCount, mySoloPitches] = await Promise.all([
+  const [incomingChallenges, outgoingChallenges, unreadCount, mySoloPitches, activeCasting, wonCastings] = await Promise.all([
     brand ? getIncomingChallenges(brand.id) : Promise.resolve([]),
     brand ? getOutgoingChallenges(brand.id) : Promise.resolve([]),
     getUnreadNotificationCount(sessionUser.id),
     brand ? getSoloPitchesForBrand(brand.id) : Promise.resolve([]),
+    brand ? getActiveCastingForBrand(brand.id) : Promise.resolve(null),
+    brand ? getWonCastingsForBrand(brand.id) : Promise.resolve([]),
   ]);
 
   return (
@@ -172,6 +176,28 @@ export default async function ProfilePage() {
             </ul>
           )}
           <SoloPitchUploadForm />
+        </div>
+      )}
+
+      {brand && (
+        <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
+          <h2 className="mb-4 text-lg font-semibold text-white">Partner-Casting</h2>
+          <p className="mb-4 text-sm text-zinc-400">
+            Suche einen Markenpartner: andere Marken reichen ein Video ein, die Community stimmt ab, wer gewinnt
+            wird dein offizieller Partner.
+          </p>
+          {wonCastings.length > 0 && (
+            <p className="mb-4 text-sm text-orange-400">
+              🏆 {brand.name} ist offizieller Partner bei {wonCastings.length} {wonCastings.length === 1 ? "Casting" : "Castings"}.
+            </p>
+          )}
+          {activeCasting ? (
+            <Link href={`/castings/${activeCasting.id}`} className="text-sm text-orange-500 hover:underline">
+              Läuft: „{activeCasting.prompt}“ ansehen →
+            </Link>
+          ) : (
+            <StartCastingForm />
+          )}
         </div>
       )}
 

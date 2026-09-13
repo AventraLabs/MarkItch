@@ -11,7 +11,15 @@ import { rateLimitHits } from "@/db/schema";
 // These numbers are starting assumptions, not measured ones (like
 // PRODUCTION_WINDOW_MS etc. in battle-format.ts) — easy to tune once real
 // traffic shows what's actually needed.
-export type RateLimitBucket = "register" | "vote" | "challenge" | "reaction" | "like";
+export type RateLimitBucket =
+  | "register"
+  | "vote"
+  | "challenge"
+  | "reaction"
+  | "like"
+  | "casting-start"
+  | "casting-submit"
+  | "casting-vote";
 
 const LIMITS: Record<RateLimitBucket, { max: number; windowMs: number }> = {
   register: { max: 5, windowMs: 60 * 60 * 1000 }, // 5 Registrierungen/Stunde pro IP
@@ -19,6 +27,9 @@ const LIMITS: Record<RateLimitBucket, { max: number; windowMs: number }> = {
   challenge: { max: 10, windowMs: 24 * 60 * 60 * 1000 }, // 10 Herausforderungen/Tag pro Marke
   reaction: { max: 10, windowMs: 24 * 60 * 60 * 1000 }, // 10 Reaktionen/Tag pro Marke
   like: { max: 300, windowMs: 60 * 60 * 1000 }, // 300 Likes/Stunde pro Nutzer
+  "casting-start": { max: 3, windowMs: 7 * 24 * 60 * 60 * 1000 }, // 3 Castings/Woche pro Marke
+  "casting-submit": { max: 10, windowMs: 24 * 60 * 60 * 1000 }, // 10 Einreichungen/Tag pro Marke
+  "casting-vote": { max: 40, windowMs: 60 * 60 * 1000 }, // 40 Casting-Stimmen/Stunde pro IP
 };
 
 /**

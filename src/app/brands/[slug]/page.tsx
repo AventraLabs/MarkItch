@@ -12,6 +12,7 @@ import { getBrandForUser } from "@/lib/brand";
 import { getLivePendingChallengeBetween } from "@/lib/challenge";
 import { getFollowerCount, isFollowing } from "@/lib/follow";
 import { getExistingOpenBattle } from "@/lib/battle";
+import { getActiveCastingForBrand, getLatestFinishedCastingForBrand } from "@/lib/casting";
 
 // Note: this page already reads the session (getOptionalUser -> auth(),
 // which touches cookies), so Next treats it as dynamic automatically —
@@ -34,12 +35,22 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
   const viewer = await getOptionalUser();
   const viewerBrand = viewer ? await getBrandForUser(viewer.id) : null;
   const isOwnBrand = viewerBrand?.id === brand.id;
-  const [livePending, followerCount, viewerFollows, existingOpenBattle] = await Promise.all([
+  const [livePending, followerCount, viewerFollows, existingOpenBattle, activeCasting] = await Promise.all([
     viewerBrand && !isOwnBrand ? getLivePendingChallengeBetween(viewerBrand.id, brand.id) : null,
     getFollowerCount(brand.id),
     viewer && !isOwnBrand ? isFollowing(viewer.id, brand.id) : false,
     viewerBrand && !isOwnBrand ? getExistingOpenBattle(brand.id, viewerBrand.id) : null,
+    getActiveCastingForBrand(brand.id),
   ]);
+  // Only bother looking up a finished casting's result if there's no
+  // active one to show instead — a brand always has at most one relevant
+  // casting to display at a time.
+  const latestFinishedCasting = activeCasting ? null : await getLatestFinishedCastingForBrand(brand.id);
+  const finishedStage = latestFinishedCasting?.stage;
+  const winnerBrandId = finishedStage?.stage === "finished" ? finishedStage.winnerBrandId : null;
+  const castingWinner = winnerBrandId
+    ? latestFinishedCasting?.submissions.find((s) => s.brandId === winnerBrandId)
+    : null;
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-16">
@@ -104,6 +115,32 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
             ) : (
               <CounterForm targetBrandId={brand.id} />
             )}
+          </div>
+        )}
+
+        {activeCasting && (
+          <div className="mt-6 rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 text-center">
+            <p className="mb-2 text-sm text-orange-300">🎬 Partner-Casting läuft: „{activeCasting.prompt}“</p>
+            <Link href={`/castings/${activeCasting.id}`} className="text-sm font-semibold text-orange-400 hover:underline">
+              {isOwnBrand ? "Ansehen" : "Ansehen & mitmachen"} →
+            </Link>
+          </div>
+        )}
+
+        {!activeCasting && castingWinner && latestFinishedCasting && (
+          <div className="mt-6 rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 text-center">
+            <p className="text-sm text-orange-300">
+              🏆 Offizieller Partner:{" "}
+              <Link href={`/brands/${castingWinner.brandSlug}`} className="font-semibold hover:underline">
+                {castingWinner.brandName}
+              </Link>
+            </p>
+            <Link
+              href={`/castings/${latestFinishedCasting.id}`}
+              className="mt-1 inline-block text-xs text-orange-400/80 hover:underline"
+            >
+              Casting ansehen →
+            </Link>
           </div>
         )}
 

@@ -477,3 +477,77 @@ export const brandAnalyticsEvents = pgTable(
 
 export type BrandAnalyticsEvent = typeof brandAnalyticsEvents.$inferSelect;
 export type NewBrandAnalyticsEvent = typeof brandAnalyticsEvents.$inferInsert;
+
+// Phase 19: Partner-Castings. A brand opens a call for other brands
+// (creators/influencers who've set up their own brand profile) to submit a
+// pitch video; the community votes on the submissions; whoever has the
+// most votes when voting closes becomes the "offizieller Partner". This is
+// deliberately its own three-table mini-system rather than reusing
+// reactions/likes: a reaction is a free, repeatable-per-brand like (Phase
+// 13), this is an exclusive one-vote-per-user choice among N candidates —
+// same difference as likes vs. votes on a Duell, just generalized from 2
+// sides to N.
+//
+// Stage ("open for submissions" / "voting" / "finished") is derived from
+// the two timestamps at read time — see src/lib/casting.ts's
+// getCastingStage — same philosophy as challenges/battles throughout this
+// file, not stored.
+export const partnerCastings = pgTable("partner_castings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hostBrandId: uuid("host_brand_id")
+    .notNull()
+    .references(() => brands.id, { onDelete: "cascade" }),
+  prompt: text("prompt").notNull(),
+  submissionDeadline: timestamp("submission_deadline", { withTimezone: true }).notNull(),
+  votingEndsAt: timestamp("voting_ends_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type PartnerCasting = typeof partnerCastings.$inferSelect;
+export type NewPartnerCasting = typeof partnerCastings.$inferInsert;
+
+// One submission per brand per casting (table name says "video", brandId
+// says "whose" — a brand can't flood a casting with multiple entries).
+export const castingSubmissions = pgTable(
+  "casting_submissions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    castingId: uuid("casting_id")
+      .notNull()
+      .references(() => partnerCastings.id, { onDelete: "cascade" }),
+    brandId: uuid("brand_id")
+      .notNull()
+      .references(() => brands.id, { onDelete: "cascade" }),
+    videoUrl: text("video_url").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("casting_submissions_casting_brand_unique_idx").on(table.castingId, table.brandId)],
+);
+
+export type CastingSubmission = typeof castingSubmissions.$inferSelect;
+export type NewCastingSubmission = typeof castingSubmissions.$inferInsert;
+
+// One vote per user per casting (not per submission) — voting for a second
+// candidate in the same casting isn't "another opinion", it's changing
+// your pick, which isn't offered here (same "one vote, no take-backs"
+// spirit as votes on a Duell).
+export const castingVotes = pgTable(
+  "casting_votes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    castingId: uuid("casting_id")
+      .notNull()
+      .references(() => partnerCastings.id, { onDelete: "cascade" }),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => castingSubmissions.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("casting_votes_casting_user_unique_idx").on(table.castingId, table.userId)],
+);
+
+export type CastingVote = typeof castingVotes.$inferSelect;
+export type NewCastingVote = typeof castingVotes.$inferInsert;
