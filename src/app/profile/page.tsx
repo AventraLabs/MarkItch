@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { requireUser } from "@/lib/session";
@@ -22,6 +23,15 @@ import { getSoloPitchesForBrand } from "@/lib/solo-pitch";
 export default async function ProfilePage() {
   const sessionUser = await requireUser();
   const [user] = await db.select().from(users).where(eq(users.id, sessionUser.id)).limit(1);
+
+  if (!user) {
+    // Session refers to a user that no longer exists in the DB (e.g. a
+    // stale session cookie outliving a deleted account) — send them
+    // through a real sign-out instead of a silent blank page, so there's
+    // an actual way out rather than a dead end.
+    redirect("/api/auth/signout?callbackUrl=%2Flogin");
+  }
+
   const brand = await getBrandForUser(sessionUser.id);
   const [incomingChallenges, outgoingChallenges, unreadCount, mySoloPitches] = await Promise.all([
     brand ? getIncomingChallenges(brand.id) : Promise.resolve([]),
@@ -29,12 +39,6 @@ export default async function ProfilePage() {
     getUnreadNotificationCount(sessionUser.id),
     brand ? getSoloPitchesForBrand(brand.id) : Promise.resolve([]),
   ]);
-
-  if (!user) {
-    // Session refers to a user that no longer exists in the DB — shouldn't
-    // normally happen, but fail safe rather than crash the page.
-    return null;
-  }
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-16">
