@@ -18,6 +18,9 @@ import { SoloPitchUploadForm } from "@/components/pitches/solo-pitch-upload-form
 import { getSoloPitchesForBrand } from "@/lib/solo-pitch";
 import { StartCastingForm } from "@/components/casting/start-casting-form";
 import { getActiveCastingForBrand, getWonCastingsForBrand } from "@/lib/casting";
+import { CreatorVideoUploadForm } from "@/components/creator-charts/creator-video-upload-form";
+import { brands as brandsTable } from "@/db/schema";
+import { ne } from "drizzle-orm";
 
 // This page reads challenges, notifications etc. below via requireUser()
 // -> auth() (cookies), so it's already dynamic — no explicit flag needed.
@@ -35,14 +38,18 @@ export default async function ProfilePage() {
   }
 
   const brand = await getBrandForUser(sessionUser.id);
-  const [incomingChallenges, outgoingChallenges, unreadCount, mySoloPitches, activeCasting, wonCastings] = await Promise.all([
-    brand ? getIncomingChallenges(brand.id) : Promise.resolve([]),
-    brand ? getOutgoingChallenges(brand.id) : Promise.resolve([]),
-    getUnreadNotificationCount(sessionUser.id),
-    brand ? getSoloPitchesForBrand(brand.id) : Promise.resolve([]),
-    brand ? getActiveCastingForBrand(brand.id) : Promise.resolve(null),
-    brand ? getWonCastingsForBrand(brand.id) : Promise.resolve([]),
-  ]);
+  const [incomingChallenges, outgoingChallenges, unreadCount, mySoloPitches, activeCasting, wonCastings, otherBrands] =
+    await Promise.all([
+      brand ? getIncomingChallenges(brand.id) : Promise.resolve([]),
+      brand ? getOutgoingChallenges(brand.id) : Promise.resolve([]),
+      getUnreadNotificationCount(sessionUser.id),
+      brand ? getSoloPitchesForBrand(brand.id) : Promise.resolve([]),
+      brand ? getActiveCastingForBrand(brand.id) : Promise.resolve(null),
+      brand ? getWonCastingsForBrand(brand.id) : Promise.resolve([]),
+      brand
+        ? db.select({ id: brandsTable.id, name: brandsTable.name }).from(brandsTable).where(ne(brandsTable.id, brand.id))
+        : Promise.resolve([]),
+    ]);
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-16">
@@ -179,12 +186,23 @@ export default async function ProfilePage() {
         </div>
       )}
 
+      {brand && otherBrands.length > 0 && (
+        <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
+          <h2 className="mb-4 text-lg font-semibold text-white">Creator-Video posten</h2>
+          <p className="mb-4 text-sm text-zinc-400">
+            Postest du sowieso Promo-Videos für eine Marke, mit der du zusammenarbeitest? Lade sie hier hoch — die
+            Community stimmt monatlich über das beste Video pro Marke ab.
+          </p>
+          <CreatorVideoUploadForm brands={otherBrands} />
+        </div>
+      )}
+
       {brand && (
         <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">Partner-Casting</h2>
+          <h2 className="mb-4 text-lg font-semibold text-white">Partner-Casting (neue Partner finden)</h2>
           <p className="mb-4 text-sm text-zinc-400">
-            Suche einen Markenpartner: andere Marken reichen ein Video ein, die Community stimmt ab, wer gewinnt
-            wird dein offizieller Partner.
+            Suche einen neuen Markenpartner: andere Marken reichen ein Video ein, die Community stimmt ab, wer
+            gewinnt wird dein offizieller Partner.
           </p>
           {wonCastings.length > 0 && (
             <p className="mb-4 text-sm text-orange-400">

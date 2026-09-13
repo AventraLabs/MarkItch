@@ -551,3 +551,56 @@ export const castingVotes = pgTable(
 
 export type CastingVote = typeof castingVotes.$inferSelect;
 export type NewCastingVote = typeof castingVotes.$inferInsert;
+
+// Phase 20: Creator-Charts. Different idea from Partner-Casting above —
+// that's a brand's open call to find a *new* partner; this is for
+// *existing* partners: a creator posts the same promo video they'd post on
+// Instagram/TikTok anyway, tagged to the brand it's about, and the
+// community votes for the best one each calendar month. No submission-to-
+// a-specific-call step, no app-declared "winner becomes partner" — just a
+// monthly leaderboard the brand can look at and decide off-platform
+// (bonus, shoutout, whatever) what to do with. `period` is a plain
+// "YYYY-MM" string computed at post time — deliberately not a separate
+// "round" table with explicit start/end: the calendar month a submission
+// was posted in IS its round, so there's nothing to schedule or close.
+export const creatorSubmissions = pgTable("creator_submissions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  brandId: uuid("brand_id")
+    .notNull()
+    .references(() => brands.id, { onDelete: "cascade" }),
+  creatorBrandId: uuid("creator_brand_id")
+    .notNull()
+    .references(() => brands.id, { onDelete: "cascade" }),
+  videoUrl: text("video_url").notNull(),
+  period: text("period").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type CreatorSubmission = typeof creatorSubmissions.$inferSelect;
+export type NewCreatorSubmission = typeof creatorSubmissions.$inferInsert;
+
+// brandId/period are denormalized from the submission onto the vote row —
+// needed right here, not just joinable, because the unique index enforcing
+// "one vote per person per brand per month" has to be on this table's own
+// columns.
+export const creatorVotes = pgTable(
+  "creator_votes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => creatorSubmissions.id, { onDelete: "cascade" }),
+    brandId: uuid("brand_id")
+      .notNull()
+      .references(() => brands.id, { onDelete: "cascade" }),
+    period: text("period").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("creator_votes_brand_period_user_unique_idx").on(table.brandId, table.period, table.userId)],
+);
+
+export type CreatorVote = typeof creatorVotes.$inferSelect;
+export type NewCreatorVote = typeof creatorVotes.$inferInsert;

@@ -19,7 +19,9 @@ export type RateLimitBucket =
   | "like"
   | "casting-start"
   | "casting-submit"
-  | "casting-vote";
+  | "casting-vote"
+  | "creator-submit"
+  | "creator-vote";
 
 const LIMITS: Record<RateLimitBucket, { max: number; windowMs: number }> = {
   register: { max: 5, windowMs: 60 * 60 * 1000 }, // 5 Registrierungen/Stunde pro IP
@@ -30,6 +32,8 @@ const LIMITS: Record<RateLimitBucket, { max: number; windowMs: number }> = {
   "casting-start": { max: 3, windowMs: 7 * 24 * 60 * 60 * 1000 }, // 3 Castings/Woche pro Marke
   "casting-submit": { max: 10, windowMs: 24 * 60 * 60 * 1000 }, // 10 Einreichungen/Tag pro Marke
   "casting-vote": { max: 40, windowMs: 60 * 60 * 1000 }, // 40 Casting-Stimmen/Stunde pro IP
+  "creator-submit": { max: 10, windowMs: 24 * 60 * 60 * 1000 }, // 10 Creator-Videos/Tag pro Marke
+  "creator-vote": { max: 40, windowMs: 60 * 60 * 1000 }, // 40 Creator-Chart-Stimmen/Stunde pro IP
 };
 
 /**

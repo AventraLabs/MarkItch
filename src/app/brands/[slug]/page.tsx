@@ -13,6 +13,7 @@ import { getLivePendingChallengeBetween } from "@/lib/challenge";
 import { getFollowerCount, isFollowing } from "@/lib/follow";
 import { getExistingOpenBattle } from "@/lib/battle";
 import { getActiveCastingForBrand, getLatestFinishedCastingForBrand } from "@/lib/casting";
+import { currentPeriod, periodLabel, getChartForBrand } from "@/lib/creator-charts";
 
 // Note: this page already reads the session (getOptionalUser -> auth(),
 // which touches cookies), so Next treats it as dynamic automatically —
@@ -51,6 +52,9 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
   const castingWinner = winnerBrandId
     ? latestFinishedCasting?.submissions.find((s) => s.brandId === winnerBrandId)
     : null;
+
+  const period = currentPeriod();
+  const { entries: chartEntries } = await getChartForBrand(brand.id, period, null);
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-16">
@@ -118,9 +122,22 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
           </div>
         )}
 
+        <div className="mt-6 rounded-lg border border-zinc-800 p-4 text-center">
+          <p className="mb-2 text-sm text-zinc-300">
+            🎥 Creator-Charts — {periodLabel(period)}
+            {chartEntries.length > 0 ? ` (${chartEntries.length})` : ""}
+          </p>
+          <Link
+            href={`/brands/${brand.slug}/charts/${period}`}
+            className="text-sm font-semibold text-orange-400 hover:underline"
+          >
+            {chartEntries.length > 0 ? "Ansehen & abstimmen" : "Noch keine Videos — erstes posten"} →
+          </Link>
+        </div>
+
         {activeCasting && (
-          <div className="mt-6 rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 text-center">
-            <p className="mb-2 text-sm text-orange-300">🎬 Partner-Casting läuft: „{activeCasting.prompt}“</p>
+          <div className="mt-4 rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 text-center">
+            <p className="mb-2 text-sm text-orange-300">🎬 Partner-Casting läuft (neuer Partner gesucht): „{activeCasting.prompt}“</p>
             <Link href={`/castings/${activeCasting.id}`} className="text-sm font-semibold text-orange-400 hover:underline">
               {isOwnBrand ? "Ansehen" : "Ansehen & mitmachen"} →
             </Link>
