@@ -1,14 +1,14 @@
 {
   "permissions": {
     "blockReadsOutsideWorkingDirectories": true,
-    "additionalDirectories": ["/Users/luca/Desktop/Market Matcher"],
+    "additionalDirectories": ["/Users/luca/Desktop/MarkItch"],
     "deny": [
       "Write(/Users/luca/Desktop/**)",
       "Edit(/Users/luca/Desktop/**)"
     ],
     "allow": [
-      "Write(/Users/luca/Desktop/Market Matcher/**)",
-      "Edit(/Users/luca/Desktop/Market Matcher/**)",
+      "Write(/Users/luca/Desktop/MarkItch/**)",
+      "Edit(/Users/luca/Desktop/MarkItch/**)",
       "Bash(npx tsc *)",
       "Bash(npx eslint *)"
     ]
