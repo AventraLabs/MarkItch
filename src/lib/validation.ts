@@ -20,6 +20,11 @@ export const RegisterSchema = z.object({
   accountType: z.enum(AccountTypes, "Bitte wähle Acro oder Assent."),
 });
 
+export const UpdateProfileSchema = z.object({
+  name: z.string().trim().min(1, "Name fehlt.").max(100).optional().or(z.literal("")),
+  email: z.email("Ungültige E-Mail-Adresse.").trim().toLowerCase(),
+});
+
 export const LoginSchema = z.object({
   email: z.email("Ungültige E-Mail-Adresse.").trim().toLowerCase(),
   password: z.string().min(1, "Passwort fehlt."),

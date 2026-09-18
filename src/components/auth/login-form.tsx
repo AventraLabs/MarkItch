@@ -1,17 +1,26 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { loginUser, type FormState } from "@/app/actions/auth";
 import { Field, FormError, SubmitButton } from "@/components/ui";
 
 export function LoginForm() {
   const [state, action] = useActionState<FormState, FormData>(loginUser, undefined);
+  const [email, setEmail] = useState("");
 
   return (
     <form action={action}>
       <FormError message={state?.errors?._form?.[0]} />
-      <Field label="E-Mail" name="email" type="email" autoComplete="email" errors={state?.errors?.email} />
+      <Field
+        label="E-Mail"
+        name="email"
+        type="email"
+        autoComplete="email"
+        errors={state?.errors?.email}
+        value={email}
+        onChange={setEmail}
+      />
       <Field
         label="Passwort"
         name="password"

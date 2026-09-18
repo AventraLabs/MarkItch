@@ -38,6 +38,12 @@ function RoleCard({
 export function RegisterForm() {
   const [state, action] = useActionState<FormState, FormData>(registerUser, undefined);
   const [accountType, setAccountType] = useState<AccountType>("assent");
+  // Phase 23: kept in local state (not left to the native form) so a failed
+  // submission — e.g. "Passwort braucht eine Zahl" — doesn't also wipe the
+  // name/email the person already typed. See Field's `onChange` doc in
+  // components/ui.tsx for why an uncontrolled field loses this on error.
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
 
   return (
     <form action={action}>
@@ -69,8 +75,16 @@ export function RegisterForm() {
         ))}
       </div>
 
-      <Field label="Name (optional)" name="name" required={false} errors={state?.errors?.name} />
-      <Field label="E-Mail" name="email" type="email" autoComplete="email" errors={state?.errors?.email} />
+      <Field label="Name (optional)" name="name" required={false} errors={state?.errors?.name} value={name} onChange={setName} />
+      <Field
+        label="E-Mail"
+        name="email"
+        type="email"
+        autoComplete="email"
+        errors={state?.errors?.email}
+        value={email}
+        onChange={setEmail}
+      />
       <Field
         label="Passwort"
         name="password"

@@ -27,7 +27,7 @@ export default function DatenschutzPage() {
           <Link href="/impressum" className="text-orange-400 hover:underline">
             Impressum
           </Link>
-          . Kontakt für Datenschutzanliegen: office@austranasolutions.com
+          . Kontakt für Datenschutzanliegen: markitch@outlook.de
         </p>
       </Section>
 
@@ -77,7 +77,7 @@ export default function DatenschutzPage() {
         <p>
           Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit
           und Widerspruch (Art. 15–21 DSGVO) sowie das Recht, dich bei einer Aufsichtsbehörde zu beschweren (in
-          Österreich: die Datenschutzbehörde, dsb.gv.at). Wende dich dafür an office@austranasolutions.com.
+          Österreich: die Datenschutzbehörde, dsb.gv.at). Wende dich dafür an markitch@outlook.de.
         </p>
       </Section>
 

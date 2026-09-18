@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import type { ReactNode } from "react";
+import type { ReactNode, ChangeEvent } from "react";
 
 export function AuthCard({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
@@ -22,6 +22,8 @@ export function Field({
   autoComplete,
   errors,
   required = true,
+  value,
+  onChange,
 }: {
   label: string;
   name: string;
@@ -29,6 +31,13 @@ export function Field({
   autoComplete?: string;
   errors?: string[];
   required?: boolean;
+  // Phase 23: optional controlled mode. React resets a <form action={fn}>
+  // to its defaults once the action settles — success *or* error — so an
+  // uncontrolled field (the default below) wipes itself on every failed
+  // validation. Pass value+onChange from the caller to keep what the
+  // person typed even when the server rejects the submission.
+  value?: string;
+  onChange?: (value: string) => void;
 }) {
   return (
     <div className="mb-4">
@@ -41,6 +50,7 @@ export function Field({
         type={type}
         autoComplete={autoComplete}
         required={required}
+        {...(onChange ? { value: value ?? "", onChange: (e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value) } : {})}
         className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white placeholder-zinc-500 outline-none focus:border-orange-500"
       />
       {errors?.map((err) => (

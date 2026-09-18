@@ -16,6 +16,7 @@ import {
   ForgotPasswordSchema,
   ResetPasswordSchema,
   ChangePasswordSchema,
+  UpdateProfileSchema,
 } from "@/lib/validation";
 
 export type FormState = { errors?: Record<string, string[]>; success?: boolean } | undefined;
@@ -156,6 +157,47 @@ export async function resendVerificationEmail(): Promise<FormState> {
 
   await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, dbUser.id));
   await issueVerificationToken(dbUser.id, dbUser.email);
+  return { success: true };
+}
+
+/**
+ * Phase 23: was missing entirely — there was no way to change your own
+ * name or email after registration. Changing the email re-triggers
+ * verification (same token flow as registration/resend), since the old
+ * verification no longer proves you own the new address.
+ */
+export async function updateProfile(_prevState: FormState, formData: FormData): Promise<FormState> {
+  const sessionUser = await requireUser();
+  const parsed = UpdateProfileSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { errors: parsed.error.flatten().fieldErrors };
+  }
+  const { name, email } = parsed.data;
+
+  const [dbUser] = await db.select().from(users).where(eq(users.id, sessionUser.id)).limit(1);
+  if (!dbUser) return { errors: { _form: ["Account nicht gefunden."] } };
+
+  const emailChanged = email !== dbUser.email;
+  if (emailChanged) {
+    const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+    if (existing) return { errors: { email: ["Für diese E-Mail-Adresse existiert bereits ein Account."] } };
+  }
+
+  await db
+    .update(users)
+    .set({
+      name: name || null,
+      email,
+      emailVerifiedAt: emailChanged ? null : dbUser.emailVerifiedAt,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, dbUser.id));
+
+  if (emailChanged) {
+    await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, dbUser.id));
+    await issueVerificationToken(dbUser.id, email);
+  }
+
   return { success: true };
 }
 
