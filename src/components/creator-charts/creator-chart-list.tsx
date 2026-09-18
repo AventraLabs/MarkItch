@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CreatorChartEntry } from "@/lib/creator-charts";
+import { ReportButton } from "@/components/moderation/report-button";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
@@ -74,18 +75,21 @@ export function CreatorChartList({
             </span>
           </div>
           <video src={e.videoUrl} className="mb-2 max-h-64 w-full rounded-lg bg-black object-contain" controls playsInline preload="metadata" />
-          {canVote &&
-            (votedId ? (
-              votedId === e.submissionId && <p className="text-xs text-orange-400">✓ Deine Stimme</p>
-            ) : (
-              <button
-                onClick={() => handleVote(e.submissionId)}
-                disabled={pendingId === e.submissionId}
-                className="rounded-full bg-orange-600 px-3 py-1 text-xs font-semibold text-white hover:bg-orange-500 disabled:opacity-50"
-              >
-                {pendingId === e.submissionId ? "…" : "Abstimmen"}
-              </button>
-            ))}
+          <div className="flex items-center justify-between">
+            {canVote &&
+              (votedId ? (
+                votedId === e.submissionId && <p className="text-xs text-orange-400">✓ Deine Stimme</p>
+              ) : (
+                <button
+                  onClick={() => handleVote(e.submissionId)}
+                  disabled={pendingId === e.submissionId}
+                  className="rounded-full bg-orange-600 px-3 py-1 text-xs font-semibold text-white hover:bg-orange-500 disabled:opacity-50"
+                >
+                  {pendingId === e.submissionId ? "…" : "Abstimmen"}
+                </button>
+              ))}
+            <ReportButton targetType="creator_submission" targetId={e.submissionId} isLoggedIn={isLoggedIn} variant="text" />
+          </div>
         </div>
       ))}
     </div>

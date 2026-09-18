@@ -10,6 +10,7 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { ResendVerificationButton } from "@/components/auth/resend-verification-button";
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
 import { EditProfileForm } from "@/components/auth/edit-profile-form";
+import { DeleteAccountForm } from "@/components/auth/delete-account-form";
 import { VideoUploadForm } from "@/components/brand/video-upload-form";
 import { VideoPlayer } from "@/components/brand/video-player";
 import { IncomingChallengeList, OutgoingChallengeList } from "@/components/challenge/challenge-list";
@@ -120,6 +121,11 @@ export default async function ProfileSettingsPage() {
       <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
         <h2 className="mb-4 text-lg font-semibold text-white">Passwort ändern</h2>
         <ChangePasswordForm />
+      </div>
+
+      <div className="mb-8 rounded-2xl border border-red-900/50 bg-zinc-950 p-6">
+        <h2 className="mb-4 text-lg font-semibold text-white">Account löschen</h2>
+        <DeleteAccountForm hasBrand={Boolean(brand)} />
       </div>
 
       <div className="mb-8 flex justify-center gap-4 text-xs text-zinc-600">

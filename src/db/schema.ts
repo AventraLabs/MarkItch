@@ -18,6 +18,11 @@ export const users = pgTable(
     // 'acro', everyone else 'assent' — see drizzle/ for the backfill UPDATE.
     accountType: text("account_type").notNull().default("assent"),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+    // Phase 24: moderation. Set by an admin via /admin/moderation — checked
+    // at login (auth.ts) and on every requireUser()/getOptionalUser() call
+    // (session.ts), so a ban actually cuts an already-active session off,
+    // not just future logins.
+    bannedAt: timestamp("banned_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -604,3 +609,30 @@ export const creatorVotes = pgTable(
 
 export type CreatorVote = typeof creatorVotes.$inferSelect;
 export type NewCreatorVote = typeof creatorVotes.$inferInsert;
+
+// Phase 24: moderation. One row per "someone flagged this" — same
+// event-log philosophy as rate_limit_hits/brand_analytics_events.
+// `targetType` + `targetId` is a loose (not foreign-keyed) pointer, same
+// reasoning as likes/comments before they got dedicated columns per type:
+// the set of reportable things (solo pitch, reaction, comment, a Duell
+// side, a casting/creator-chart submission, a brand) is too varied for one
+// FK, and reports must survive even if the reported content is later
+// deleted by the same moderation flow that reads them.
+export const reports = pgTable("reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  reporterUserId: uuid("reporter_user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // 'solo_pitch' | 'reaction' | 'comment' | 'battle_a' | 'battle_b' | 'casting_submission' | 'creator_submission' | 'brand'
+  targetType: text("target_type").notNull(),
+  targetId: uuid("target_id").notNull(),
+  reason: text("reason").notNull(),
+  note: text("note"),
+  // 'open' | 'resolved'
+  status: text("status").notNull().default("open"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+});
+
+export type Report = typeof reports.$inferSelect;
+export type NewReport = typeof reports.$inferInsert;

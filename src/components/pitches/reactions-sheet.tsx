@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { ReactionWithBrand } from "@/lib/reaction";
 import { ReactionUploadForm } from "@/components/pitches/reaction-upload-form";
 import { PromoteReactionButton } from "@/components/pitches/promote-reaction-button";
+import { ReportButton } from "@/components/moderation/report-button";
 
 type ReactionRow = Omit<ReactionWithBrand, "createdAt"> & { createdAt: string };
 
@@ -112,6 +113,7 @@ export function ReactionsSheet({
                       <span className="text-xs font-medium text-white">{r.likeCount}</span>
                     </button>
                     {canPromote && !r.promotedToBattleId && <PromoteReactionButton reactionId={r.id} />}
+                    <ReportButton targetType="reaction" targetId={r.id} isLoggedIn={isLoggedIn} variant="text" />
                   </div>
                 </li>
               ))}

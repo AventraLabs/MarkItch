@@ -17,6 +17,7 @@ import {
   ResetPasswordSchema,
   ChangePasswordSchema,
   UpdateProfileSchema,
+  DeleteAccountSchema,
 } from "@/lib/validation";
 
 export type FormState = { errors?: Record<string, string[]>; success?: boolean } | undefined;
@@ -219,4 +220,32 @@ export async function changePassword(_prevState: FormState, formData: FormData):
   await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, dbUser.id));
 
   return { success: true };
+}
+
+/**
+ * Phase 24: self-service account deletion — an App Store hard requirement
+ * for apps with account creation (Guideline 5.1.1v). Password-confirmed,
+ * same "prove you're really you" gate as changePassword. Every FK to
+ * users.id is onDelete: cascade (see schema.ts) except brandMembers'
+ * brand itself: if this was a brand's only member, the brand and
+ * everything posted under it stays live, just ownerless — DeleteAccountForm
+ * warns about this before submitting, deleting a brand outright would also
+ * wipe any Duell it's currently part of for the *other* brand and that
+ * Duell's voters, too destructive to do silently as a side effect here.
+ */
+export async function deleteAccount(_prevState: FormState, formData: FormData): Promise<FormState> {
+  const sessionUser = await requireUser();
+  const parsed = DeleteAccountSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { errors: parsed.error.flatten().fieldErrors };
+  }
+
+  const [dbUser] = await db.select().from(users).where(eq(users.id, sessionUser.id)).limit(1);
+  if (!dbUser) return { errors: { _form: ["Account nicht gefunden."] } };
+
+  const valid = await verifyPassword(parsed.data.password, dbUser.passwordHash);
+  if (!valid) return { errors: { password: ["Passwort ist falsch."] } };
+
+  await db.delete(users).where(eq(users.id, dbUser.id));
+  await signOut({ redirectTo: "/" });
 }

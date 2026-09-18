@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import type { CommentWithAuthor } from "@/lib/comment";
+import { ReportButton } from "@/components/moderation/report-button";
 
 function timeAgo(iso: string): string {
   const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / (60 * 1000));
@@ -109,7 +110,10 @@ export function CommentSheet({
                 <li key={c.id}>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-white">{c.authorName}</span>
-                    <span className="text-xs text-zinc-600">{timeAgo(c.createdAt)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-zinc-600">{timeAgo(c.createdAt)}</span>
+                      <ReportButton targetType="comment" targetId={c.id} isLoggedIn={isLoggedIn} variant="text" />
+                    </div>
                   </div>
                   <p className="mt-0.5 text-sm text-zinc-300">{c.content}</p>
                 </li>

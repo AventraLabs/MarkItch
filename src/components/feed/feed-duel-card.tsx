@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { FollowButton } from "@/components/brand/follow-button";
+import { ReportButton } from "@/components/moderation/report-button";
 import type { FeedDuel } from "@/lib/feed";
 import { trackAnalyticsEvent } from "@/lib/analytics-client";
 
@@ -310,6 +311,12 @@ export function FeedDuelCard({
           <span className="text-3xl">↗️</span>
           <span className="text-xs font-medium text-white">{shareLabel ? "Kopiert" : "Teilen"}</span>
         </button>
+
+        <ReportButton
+          targetType={sideIndex === 0 ? "battle_a" : "battle_b"}
+          targetId={duel.battleId}
+          isLoggedIn={isLoggedIn}
+        />
       </div>
     </div>
   );

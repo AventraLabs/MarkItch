@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { FollowButton } from "@/components/brand/follow-button";
 import { PitchChallengeButton } from "@/components/pitches/pitch-challenge-button";
+import { ReportButton } from "@/components/moderation/report-button";
 import type { FeedSoloPitch } from "@/lib/feed";
 import { trackAnalyticsEvent } from "@/lib/analytics-client";
 
@@ -127,6 +128,8 @@ export function FeedSoloPitchCard({
           <span className="text-3xl">↗️</span>
           <span className="text-xs font-medium text-white">{shareLabel ? "Kopiert" : "Teilen"}</span>
         </button>
+
+        <ReportButton targetType="solo_pitch" targetId={pitch.soloPitchId} isLoggedIn={isLoggedIn} />
       </div>
     </div>
   );

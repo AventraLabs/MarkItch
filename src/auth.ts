@@ -27,6 +27,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await verifyPassword(password, user.passwordHash);
         if (!valid) return null;
 
+        // Phase 24: a banned account can't log back in — the generic
+        // "E-Mail oder Passwort ist falsch" message loginUser shows for any
+        // authorize() failure covers this too, deliberately (no need to
+        // reveal ban status to someone who no longer has a session).
+        if (user.bannedAt) return null;
+
         return {
           id: user.id,
           email: user.email,

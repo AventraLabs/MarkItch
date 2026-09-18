@@ -44,6 +44,10 @@ export const ChangePasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 
+export const DeleteAccountSchema = z.object({
+  password: z.string().min(1, "Passwort fehlt."),
+});
+
 // Phase 2: brands. Category list matches the per-category rankings from the
 // product spec; kept as a plain string column in the DB so adding one later
 // is a code change, not a migration.

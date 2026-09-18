@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CastingSubmissionWithBrand } from "@/lib/casting";
+import { ReportButton } from "@/components/moderation/report-button";
 
 export function CastingVoteList({
   castingId,
@@ -78,18 +79,21 @@ export function CastingVoteList({
               <span>
                 {s.voteCount} {s.voteCount === 1 ? "Stimme" : "Stimmen"} ({pct}%)
               </span>
-              {canVote &&
-                (votedId ? (
-                  votedId === s.id && <span className="text-orange-400">✓ Deine Stimme</span>
-                ) : (
-                  <button
-                    onClick={() => handleVote(s.id)}
-                    disabled={pendingId === s.id}
-                    className="rounded-full bg-orange-600 px-3 py-1 font-semibold text-white hover:bg-orange-500 disabled:opacity-50"
-                  >
-                    {pendingId === s.id ? "…" : "Abstimmen"}
-                  </button>
-                ))}
+              <div className="flex items-center gap-3">
+                {canVote &&
+                  (votedId ? (
+                    votedId === s.id && <span className="text-orange-400">✓ Deine Stimme</span>
+                  ) : (
+                    <button
+                      onClick={() => handleVote(s.id)}
+                      disabled={pendingId === s.id}
+                      className="rounded-full bg-orange-600 px-3 py-1 font-semibold text-white hover:bg-orange-500 disabled:opacity-50"
+                    >
+                      {pendingId === s.id ? "…" : "Abstimmen"}
+                    </button>
+                  ))}
+                <ReportButton targetType="casting_submission" targetId={s.id} isLoggedIn={isLoggedIn} variant="text" />
+              </div>
             </div>
           </div>
         );
