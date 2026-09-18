@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const casting = await getCastingById(id, null);
   if (!casting) return {};
   return {
-    title: `Partner-Casting: ${casting.hostBrand.name} — Market Matcher`,
+    title: `Partner-Casting: ${casting.hostBrand.name} — MarkItch`,
     description: casting.prompt,
   };
 }

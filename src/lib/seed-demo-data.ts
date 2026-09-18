@@ -4,7 +4,7 @@
 // package can't resolve. Both actual callers (the CLI script and the
 // server-only API route below) are already server contexts, so the guard
 // would be belt-and-suspenders at best.
-import { inArray, like } from "drizzle-orm";
+import { inArray, like, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "@/db/schema";
@@ -27,7 +27,7 @@ import {
 // testing. Every row this creates is namespaced so it can be safely re-run
 // against any environment (including prod) without ever touching a real
 // user or brand:
-//   - fictional brand owners + viewers all use @marketmatcher.demo emails
+//   - fictional brand owners + viewers all use @markitch.demo emails
 //   - the 16 fictional brand slugs are hardcoded below (no real trademarks —
 //     the master prompt explicitly said not to use real brand logos/assets,
 //     and using real company names as "losers" in a demo carries the same
@@ -49,7 +49,12 @@ import {
 
 type Db = PostgresJsDatabase<typeof schema>;
 
-export const DEMO_EMAIL_DOMAIN = "marketmatcher.demo";
+export const DEMO_EMAIL_DOMAIN = "markitch.demo";
+// The app was renamed from Market Matcher to MarkItch (2026-09-18) — this old
+// domain is only here so the wipe step below also cleans up demo rows a
+// pre-rename seed run left behind in prod. Safe to delete once that's
+// confirmed done (a fresh seed run after this deploy).
+const LEGACY_DEMO_EMAIL_DOMAIN = "marketmatcher.demo";
 export const DEMO_PASSWORD = "Demo1234!"; // shared password for every demo account
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -176,7 +181,9 @@ export async function seedDemoContent(db: Db): Promise<SeedDemoResult> {
   // rows this same function created.
   const slugs = BRANDS.map((b) => b.slug);
   await db.delete(brands).where(inArray(brands.slug, slugs)); // cascades battles/votes/comments/likes/challenges
-  await db.delete(users).where(like(users.email, `%@${DEMO_EMAIL_DOMAIN}`)); // cascades brandMembers/follows/etc left over
+  await db
+    .delete(users)
+    .where(or(like(users.email, `%@${DEMO_EMAIL_DOMAIN}`), like(users.email, `%@${LEGACY_DEMO_EMAIL_DOMAIN}`))); // cascades brandMembers/follows/etc left over
 
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
 

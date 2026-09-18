@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useActionState } from "react";
 import { counterWithVideo, type CounterFormState } from "@/app/actions/battle";
 import { FormError, SubmitButton } from "@/components/ui";
+import { VideoPickerInput } from "@/components/video-picker-input";
 
 export function CounterForm({ targetBrandId }: { targetBrandId: string }) {
   const [open, setOpen] = useState(false);
@@ -29,14 +30,7 @@ export function CounterForm({ targetBrandId }: { targetBrandId: string }) {
         abstimmen.
       </p>
       <FormError message={state?.error} />
-      <input
-        id="video"
-        name="video"
-        type="file"
-        accept="video/mp4,video/webm,video/quicktime"
-        required
-        className="mb-3 w-full text-sm text-zinc-300 file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-800 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-700"
-      />
+      <VideoPickerInput />
       <div className="flex gap-2">
         <SubmitButton>Antworten & Pitch starten</SubmitButton>
         <button

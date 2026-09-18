@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { postCreatorVideo, type PostCreatorVideoFormState } from "@/app/actions/creator-charts";
 import { FormError, FormSuccess, SubmitButton } from "@/components/ui";
+import { VideoPickerInput } from "@/components/video-picker-input";
 
 export function CreatorVideoUploadForm({ brands }: { brands: { id: string; name: string }[] }) {
   const [state, action] = useActionState<PostCreatorVideoFormState, FormData>(postCreatorVideo, undefined);
@@ -26,13 +27,7 @@ export function CreatorVideoUploadForm({ brands }: { brands: { id: string; name:
           </option>
         ))}
       </select>
-      <input
-        name="video"
-        type="file"
-        accept="video/mp4,video/webm,video/quicktime"
-        required
-        className="mb-3 w-full text-sm text-zinc-300 file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-800 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-700"
-      />
+      <VideoPickerInput />
       <SubmitButton>Video posten</SubmitButton>
     </form>
   );

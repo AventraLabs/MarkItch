@@ -6,7 +6,7 @@ const resend = resendApiKey ? new Resend(resendApiKey) : null;
 // Until a custom domain is verified in Resend, this default sender only
 // works when sending to the Resend account's own owner email. See the
 // deployment notes for how to lift that restriction.
-const FROM = process.env.EMAIL_FROM ?? "Market Matcher <onboarding@resend.dev>";
+const FROM = process.env.EMAIL_FROM ?? "MarkItch <onboarding@resend.dev>";
 
 async function sendEmail(to: string, subject: string, html: string, linkForLogs: string) {
   // Always log the link. Until a verified domain is set up, this is the
@@ -31,8 +31,8 @@ async function sendEmail(to: string, subject: string, html: string, linkForLogs:
 export async function sendVerificationEmail(to: string, verifyUrl: string) {
   await sendEmail(
     to,
-    "Bestätige deine E-Mail-Adresse — Market Matcher",
-    `<p>Willkommen bei Market Matcher!</p>
+    "Bestätige deine E-Mail-Adresse — MarkItch",
+    `<p>Willkommen bei MarkItch!</p>
      <p>Bitte bestätige deine E-Mail-Adresse, um deinen Account zu aktivieren:</p>
      <p><a href="${verifyUrl}">${verifyUrl}</a></p>
      <p>Der Link ist 24 Stunden gültig.</p>`,
@@ -43,7 +43,7 @@ export async function sendVerificationEmail(to: string, verifyUrl: string) {
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   await sendEmail(
     to,
-    "Passwort zurücksetzen — Market Matcher",
+    "Passwort zurücksetzen — MarkItch",
     `<p>Du hast angefordert, dein Passwort zurückzusetzen.</p>
      <p><a href="${resetUrl}">${resetUrl}</a></p>
      <p>Der Link ist 1 Stunde gültig. Falls du das nicht warst, kannst du diese E-Mail ignorieren.</p>`,

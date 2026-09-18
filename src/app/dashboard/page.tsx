@@ -41,7 +41,7 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-16">
       <h1 className="mb-1 text-2xl font-bold text-white">Dashboard</h1>
-      <p className="mb-6 text-sm text-zinc-500">Wie {brand.name} bei Market Matcher performt.</p>
+      <p className="mb-6 text-sm text-zinc-500">Wie {brand.name} bei MarkItch performt.</p>
 
       <div className="mb-8 grid grid-cols-3 gap-3">
         <StatCard label="Views" value={summary.views} />

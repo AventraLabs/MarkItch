@@ -1,4 +1,4 @@
-# Market Matcher
+# MarkItch
 
 > Werbung wird zum Entertainment.
 
@@ -492,7 +492,7 @@ master prompt's own §30 asked for this from day one and it was never done).
   live with real vote counts and days-left countdowns, and `awaiting_videos` (both sides
   missing, or just one) so `/pitches` has real content too. Plus 150 synthetic viewer
   accounts casting the votes/likes/comments, and follow counts weighted so Goliaths have
-  visibly more followers than Davids. Fully namespaced (`@marketmatcher.demo` emails, a
+  visibly more followers than Davids. Fully namespaced (`@markitch.demo` emails, a
   fixed list of brand slugs) so re-running it is always safe: it wipes and recreates only
   its own rows, in prod or in dev, never touching a real account. Demo accounts share one
   password (printed by the script) so the user can log in as any demo brand to test the
@@ -648,7 +648,7 @@ Resend:
 
 1. resend.com → Domains → Add Domain.
 2. Add the DNS records it gives you at your domain registrar.
-3. Once verified, set `EMAIL_FROM="Market Matcher <noreply@yourdomain.com>"` in
+3. Once verified, set `EMAIL_FROM="MarkItch <noreply@yourdomain.com>"` in
    Vercel's env vars.
 
 If there's no domain yet, everything still works end-to-end via the server-log

@@ -27,7 +27,7 @@ function fallbackImage() {
           fontWeight: 800,
         }}
       >
-        Market Matcher
+        MarkItch
       </div>
     ),
     size,
@@ -84,7 +84,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", fontSize: 32, fontWeight: 800, color: ORANGE }}>Market Matcher</div>
+        <div style={{ display: "flex", fontSize: 32, fontWeight: 800, color: ORANGE }}>MarkItch</div>
 
         <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", gap: 48 }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, gap: 12 }}>

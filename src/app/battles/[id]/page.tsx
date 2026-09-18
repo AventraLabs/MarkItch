@@ -13,8 +13,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const battle = await getBattleById(id);
   if (!battle) return {};
   return {
-    title: `${battle.brandA.name} vs. ${battle.brandB.name} — Market Matcher`,
-    description: "Wer hat gewonnen? Jetzt auf Market Matcher ansehen und mitentscheiden.",
+    title: `${battle.brandA.name} vs. ${battle.brandB.name} — MarkItch`,
+    description: "Wer hat gewonnen? Jetzt auf MarkItch ansehen und mitentscheiden.",
   };
 }
 

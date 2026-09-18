@@ -25,12 +25,12 @@ export function ShareResultImageButton({
     try {
       const res = await fetch(`/battles/${battleId}/opengraph-image`);
       const blob = await res.blob();
-      const file = new File([blob], `market-matcher-${battleId}.png`, { type: "image/png" });
+      const file = new File([blob], `markitch-${battleId}.png`, { type: "image/png" });
 
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: `${brandAName} vs. ${brandBName} auf Market Matcher`,
+          title: `${brandAName} vs. ${brandBName} auf MarkItch`,
         });
       } else {
         // Desktop / no file-share support: open the image so it can be

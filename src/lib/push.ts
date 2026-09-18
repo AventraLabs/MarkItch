@@ -13,7 +13,7 @@ import { pushSubscriptions, type NewPushSubscription } from "@/db/schema";
 // keeps working before/without that env var being configured.
 const PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 const PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
-const SUBJECT = process.env.VAPID_SUBJECT ?? "mailto:no-reply@market-matcher.app";
+const SUBJECT = process.env.VAPID_SUBJECT ?? "mailto:no-reply@markitch.app";
 
 const configured = Boolean(PUBLIC_KEY && PRIVATE_KEY);
 if (configured) {

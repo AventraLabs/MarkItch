@@ -5,7 +5,7 @@ import { getUnreadNotificationCount } from "@/lib/notification";
 import { BottomNav } from "@/components/nav/bottom-nav";
 
 export const metadata: Metadata = {
-  title: "Market Matcher",
+  title: "MarkItch",
   description: "Werbung wird zum Entertainment.",
 };
 

@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug, period } = await params;
   const [brand] = await db.select({ name: brands.name }).from(brands).where(eq(brands.slug, slug)).limit(1);
   if (!brand) return {};
-  return { title: `Creator-Charts: ${brand.name} (${periodLabel(period)}) — Market Matcher` };
+  return { title: `Creator-Charts: ${brand.name} (${periodLabel(period)}) — MarkItch` };
 }
 
 /**

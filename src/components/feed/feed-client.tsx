@@ -196,12 +196,12 @@ export function FeedClient({
     // lives (feed or waiting room) if it isn't a finished result.
     shareUrl(
       `${window.location.origin}/battles/${duel.battleId}`,
-      `${duel.sides[0].brandName} vs. ${duel.sides[1].brandName} auf Market Matcher`,
+      `${duel.sides[0].brandName} vs. ${duel.sides[1].brandName} auf MarkItch`,
     );
   }
 
   function handleShareSolo(pitch: FeedSoloPitch) {
-    shareUrl(`${window.location.origin}/?pitch=${pitch.soloPitchId}`, `${pitch.brandName} auf Market Matcher`);
+    shareUrl(`${window.location.origin}/?pitch=${pitch.soloPitchId}`, `${pitch.brandName} auf MarkItch`);
   }
 
   async function handleToggleLikeSolo(pitch: FeedSoloPitch) {

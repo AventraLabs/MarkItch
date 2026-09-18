@@ -20,7 +20,7 @@ export default function NutzungsbedingungenPage() {
 
       <Section title="Geltungsbereich">
         <p>
-          Diese Nutzungsbedingungen gelten für alle registrierten Nutzer:innen von Market Matcher, betrieben von der
+          Diese Nutzungsbedingungen gelten für alle registrierten Nutzer:innen von MarkItch, betrieben von der
           Austrana Solutions KG (siehe{" "}
           <Link href="/impressum" className="text-orange-400 hover:underline">
             Impressum
