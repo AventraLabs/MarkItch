@@ -9,6 +9,7 @@ type BattleBrand = {
   slug: string;
   logoUrl: string | null;
   videoUrl: string | null;
+  website: string | null;
 };
 
 export type BattleWithBrands = Battle & { brandA: BattleBrand; brandB: BattleBrand };
@@ -40,6 +41,7 @@ const brandCols = {
   slug: brands.slug,
   logoUrl: brands.logoUrl,
   videoUrl: brands.videoUrl,
+  website: brands.website,
 };
 
 async function attachBrands(rows: Battle[]): Promise<BattleWithBrands[]> {

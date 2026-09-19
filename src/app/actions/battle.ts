@@ -11,6 +11,7 @@ import { getExistingOpenBattle } from "@/lib/battle";
 import { activateBattleIfBothSidesReady } from "@/lib/battle-stage";
 import { uploadVideo, ALLOWED_VIDEO_TYPES } from "@/lib/storage";
 import { PITCH_CATEGORY } from "@/lib/battle-format";
+import { validateCtaLink } from "@/lib/cta-link";
 
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // same limit as the profile showcase video
 
@@ -72,6 +73,11 @@ export async function uploadBattleVideo(
     return { error: validated.error };
   }
 
+  const cta = validateCtaLink(formData);
+  if ("errors" in cta) {
+    return { error: Object.values(cta.errors)[0]![0] };
+  }
+
   const uploaded = await uploadVideo(validated.file, "battle-videos");
   const now = new Date();
 
@@ -79,8 +85,8 @@ export async function uploadBattleVideo(
     .update(battles)
     .set(
       isA
-        ? { brandAVideoUrl: uploaded.url, brandASubmittedAt: now }
-        : { brandBVideoUrl: uploaded.url, brandBSubmittedAt: now },
+        ? { brandAVideoUrl: uploaded.url, brandASubmittedAt: now, brandACtaLabel: cta.ctaLabel, brandACtaUrl: cta.ctaUrl }
+        : { brandBVideoUrl: uploaded.url, brandBSubmittedAt: now, brandBCtaLabel: cta.ctaLabel, brandBCtaUrl: cta.ctaUrl },
     )
     .where(eq(battles.id, battleId));
 
@@ -128,6 +134,11 @@ export async function counterWithVideo(_prevState: CounterFormState, formData: F
     return { error: validated.error };
   }
 
+  const cta = validateCtaLink(formData);
+  if ("errors" in cta) {
+    return { error: Object.values(cta.errors)[0]![0] };
+  }
+
   const uploaded = await uploadVideo(validated.file, "battle-videos");
   const now = new Date();
 
@@ -140,11 +151,14 @@ export async function counterWithVideo(_prevState: CounterFormState, formData: F
       category: PITCH_CATEGORY,
       // Snapshotted, not live-referenced — if targetBrand later replaces
       // their profile video, this battle keeps showing what was actually
-      // countered.
+      // countered. No CTA snapshot for this side (see schema.ts) — the
+      // display layer falls back to the brand's own `website` instead.
       brandAVideoUrl: targetBrand.videoUrl,
       brandASubmittedAt: targetBrand.videoUploadedAt ?? now,
       brandBVideoUrl: uploaded.url,
       brandBSubmittedAt: now,
+      brandBCtaLabel: cta.ctaLabel,
+      brandBCtaUrl: cta.ctaUrl,
     })
     .returning();
 

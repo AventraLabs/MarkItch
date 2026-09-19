@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { counterWithVideo, type CounterFormState } from "@/app/actions/battle";
 import { FormError, SubmitButton } from "@/components/ui";
 import { VideoPickerInput } from "@/components/video-picker-input";
+import { CtaLinkFields } from "@/components/pitches/cta-link-fields";
 
 export function CounterForm({ targetBrandId }: { targetBrandId: string }) {
   const [open, setOpen] = useState(false);
@@ -31,6 +32,7 @@ export function CounterForm({ targetBrandId }: { targetBrandId: string }) {
       </p>
       <FormError message={state?.error} />
       <VideoPickerInput />
+      <CtaLinkFields />
       <div className="flex gap-2">
         <SubmitButton>Antworten & Pitch starten</SubmitButton>
         <button

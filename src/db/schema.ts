@@ -193,6 +193,19 @@ export const battles = pgTable(
     category: text("category").notNull().default("Verkaufe dein Produkt oder deine Leistung in 15 Sekunden"),
     brandAVideoUrl: text("brand_a_video_url"),
     brandBVideoUrl: text("brand_b_video_url"),
+    // Phase 27: Call-to-Action. "A video that can't be acted on doesn't sell
+    // anything" — every fresh video upload now asks where a viewer should
+    // go next (shop, menu, map, a discount-code landing page). Nullable
+    // (existing rows never had one) but required at the upload-form level
+    // for any new upload — see uploadBattleVideo/counterWithVideo. Per side,
+    // not per battle, since brandAVideoUrl/brandBVideoUrl already are; a
+    // side with no CTA of its own falls back to that brand's profile
+    // `website` at display time (see resolveBattleVideos-adjacent code in
+    // feed.ts), never silently to the *other* side's link.
+    brandACtaLabel: text("brand_a_cta_label"),
+    brandACtaUrl: text("brand_a_cta_url"),
+    brandBCtaLabel: text("brand_b_cta_label"),
+    brandBCtaUrl: text("brand_b_cta_url"),
     brandASubmittedAt: timestamp("brand_a_submitted_at", { withTimezone: true }),
     brandBSubmittedAt: timestamp("brand_b_submitted_at", { withTimezone: true }),
     productionDeadline: timestamp("production_deadline", { withTimezone: true }),
@@ -406,6 +419,9 @@ export const soloPitches = pgTable("solo_pitches", {
     .references(() => brands.id, { onDelete: "cascade" }),
   videoUrl: text("video_url").notNull(),
   category: text("category").notNull(),
+  // Phase 27: Call-to-Action — see the matching comment on battles above.
+  ctaLabel: text("cta_label"),
+  ctaUrl: text("cta_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -37,6 +37,9 @@ export type FeedDuelSide = {
   /** Hide the follow button on your own brand's side. */
   viewerOwnsThisBrand: boolean;
   viewerFollowsBrand: boolean;
+  /** Phase 27: null for content posted before this existed — no fallback here (unlike the counter-flow's reused profile video), a video-upload's own CTA is the real thing. */
+  ctaLabel: string | null;
+  ctaUrl: string | null;
 };
 
 export type FeedDuel = {
@@ -156,6 +159,11 @@ async function buildFeedDuels(viewerId: string | null): Promise<FeedDuel[]> {
 
     const rawSides: [typeof battle.brandA, typeof battle.brandB] = [battle.brandA, battle.brandB];
     const videoUrls = [videoUrlA, videoUrlB];
+    // Phase 27: each side's own CTA if it uploaded one, else that brand's
+    // profile website — only the counter-flow's reused profile-video side
+    // (see counterWithVideo) is expected to actually need the fallback.
+    const ctaLabels = [battle.brandACtaLabel, battle.brandBCtaLabel];
+    const ctaUrls = [battle.brandACtaUrl ?? battle.brandA.website, battle.brandBCtaUrl ?? battle.brandB.website];
     const sides = rawSides.map((brand, i): FeedDuelSide => {
       const key = `${battle.id}:${brand.id}`;
       return {
@@ -168,6 +176,8 @@ async function buildFeedDuels(viewerId: string | null): Promise<FeedDuel[]> {
         viewerLiked: viewerLikedKeys.has(key),
         viewerOwnsThisBrand: viewerBrand?.id === brand.id,
         viewerFollowsBrand: followedSet.has(brand.id),
+        ctaLabel: ctaLabels[i] ?? (ctaUrls[i] ? "Zur Website" : null),
+        ctaUrl: ctaUrls[i],
       };
     }) as [FeedDuelSide, FeedDuelSide];
 
@@ -248,6 +258,9 @@ export type FeedSoloPitch = {
   createdAt: string; // ISO
   /** Phase 26: an active, paid-for ranking bump — see boost.ts. Shown as a small badge to everyone, not just the owner. */
   boosted: boolean;
+  /** Phase 27: null only for content posted before this existed. */
+  ctaLabel: string | null;
+  ctaUrl: string | null;
 };
 
 export type FeedItem = FeedDuel | FeedSoloPitch;
@@ -286,6 +299,8 @@ async function buildFeedSoloPitches(viewerId: string | null): Promise<FeedSoloPi
     reactionCount: reactionCounts.get(pitch.id) ?? 0,
     createdAt: pitch.createdAt.toISOString(),
     boosted: boostedIds.has(pitch.id),
+    ctaLabel: pitch.ctaLabel,
+    ctaUrl: pitch.ctaUrl,
   }));
 }
 

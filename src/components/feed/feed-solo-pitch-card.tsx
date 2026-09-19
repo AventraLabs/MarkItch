@@ -105,6 +105,16 @@ export function FeedSoloPitchCard({
             <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-medium text-orange-400">🚀 Boost</span>
           )}
         </div>
+        {pitch.ctaUrl && pitch.ctaLabel && (
+          <a
+            href={pitch.ctaUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-500"
+          >
+            {pitch.ctaLabel} →
+          </a>
+        )}
         {viewerHasOtherBrand && <PitchChallengeButton soloPitchId={pitch.soloPitchId} />}
         {pitch.viewerOwnsThisBrand && <BoostButton soloPitchId={pitch.soloPitchId} />}
       </div>

@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { uploadVideo, ALLOWED_VIDEO_TYPES } from "@/lib/storage";
 import { PITCH_CATEGORY } from "@/lib/battle-format";
+import { validateCtaLink } from "@/lib/cta-link";
 
 export type SoloPitchFormState = { errors?: Record<string, string[]>; success?: boolean } | undefined;
 
@@ -37,12 +38,19 @@ export async function postSoloPitch(_prevState: SoloPitchFormState, formData: Fo
     return { errors: { video: ["Erlaubt: MP4, WEBM oder MOV."] } };
   }
 
+  const cta = validateCtaLink(formData);
+  if ("errors" in cta) {
+    return { errors: cta.errors };
+  }
+
   const uploaded = await uploadVideo(file, "solo-pitch-videos");
 
   await db.insert(soloPitches).values({
     brandId: myBrand.id,
     videoUrl: uploaded.url,
     category: PITCH_CATEGORY,
+    ctaLabel: cta.ctaLabel,
+    ctaUrl: cta.ctaUrl,
   });
 
   refresh();

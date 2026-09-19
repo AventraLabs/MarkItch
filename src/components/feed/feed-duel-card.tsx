@@ -278,6 +278,16 @@ export function FeedDuelCard({
             {stageLabel}
           </span>
         </div>
+        {side.ctaUrl && side.ctaLabel && (
+          <a
+            href={side.ctaUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="pointer-events-auto mb-2 inline-flex items-center gap-1.5 rounded-full bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-500"
+          >
+            {side.ctaLabel} →
+          </a>
+        )}
         <div className="pointer-events-auto mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-300">
           <button
             onClick={() => setSideIndex(sideIndex === 0 ? 1 : 0)}
