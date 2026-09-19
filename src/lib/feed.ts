@@ -205,11 +205,21 @@ function scoreFromEngagement(engagement: number, ageHours: number): number {
   return (engagement + 1) / Math.pow(ageHours + 2, 1.3);
 }
 
-function trendingScoreForDuel(duel: FeedDuel): number {
+// Phase 25: Feed-Personalisierung. A nudge, not an override — a followed
+// brand's Duell scores higher than an identical unfollowed one, but a
+// genuinely trending unfollowed Duell can still outrank a quiet followed
+// one. Keeps "For You" one shared ranking algorithm rather than forking
+// into a separate personalized-vs-generic feed (that's what "Folge ich"
+// is already for, see getFollowingFeed below).
+const FOLLOW_BOOST = 1.5;
+
+function trendingScoreForDuel(duel: FeedDuel, followedBrandIds: Set<string>): number {
   const ageHours = Math.max(0, (Date.now() - new Date(duel.activatedAt).getTime()) / (60 * 60 * 1000));
   const totalLikes = duel.sides[0].likeCount + duel.sides[1].likeCount;
   const engagement = totalLikes * 1 + duel.commentCount * 1.5 + duel.tally.total * 2;
-  return scoreFromEngagement(engagement, ageHours);
+  const score = scoreFromEngagement(engagement, ageHours);
+  const isFollowed = followedBrandIds.has(duel.sides[0].brandId) || followedBrandIds.has(duel.sides[1].brandId);
+  return isFollowed ? score * FOLLOW_BOOST : score;
 }
 
 // Phase 13: a solo pitch — every video's starting point, watchable/likable/
@@ -289,9 +299,19 @@ export type FeedPage = { items: FeedItem[]; total: number };
 // surfaces instead of losing to an old, vote-heavy Duell.
 const SOLO_INTERLEAVE_EVERY = 3;
 
-function interleaveFeed(duels: FeedDuel[], soloPitchItems: FeedSoloPitch[]): FeedItem[] {
-  const rankedDuels = [...duels].sort((a, b) => trendingScoreForDuel(b) - trendingScoreForDuel(a));
-  const freshSolos = [...soloPitchItems].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+function interleaveFeed(duels: FeedDuel[], soloPitchItems: FeedSoloPitch[], followedBrandIds: string[]): FeedItem[] {
+  const followedSet = new Set(followedBrandIds);
+  const rankedDuels = [...duels].sort((a, b) => trendingScoreForDuel(b, followedSet) - trendingScoreForDuel(a, followedSet));
+  // Same "nudge, not override" idea as Duelle: a followed brand's fresh
+  // pitch is bucketed ahead of unfollowed ones, but still loses to an even
+  // fresher followed pitch — recency inside each bucket is untouched, so
+  // the Phase 21 "newest first" guarantee for solo pitches still holds.
+  const freshSolos = [...soloPitchItems].sort((a, b) => {
+    const aFollowed = followedSet.has(a.brandId) ? 0 : 1;
+    const bFollowed = followedSet.has(b.brandId) ? 0 : 1;
+    if (aFollowed !== bFollowed) return aFollowed - bFollowed;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 
   const merged: FeedItem[] = [];
   let duelIdx = 0;
@@ -311,8 +331,12 @@ function interleaveFeed(duels: FeedDuel[], soloPitchItems: FeedSoloPitch[]): Fee
 
 /** "Feed" — every live/finished Duell plus every solo pitch; solo pitches are interleaved by recency, see interleaveFeed. */
 export async function getForYouFeed(viewerId: string | null, offset = 0, limit = 6): Promise<FeedPage> {
-  const [duels, soloPitchItems] = await Promise.all([buildFeedDuels(viewerId), buildFeedSoloPitches(viewerId)]);
-  const items = interleaveFeed(duels, soloPitchItems);
+  const [duels, soloPitchItems, followedBrandIds] = await Promise.all([
+    buildFeedDuels(viewerId),
+    buildFeedSoloPitches(viewerId),
+    viewerId ? getFollowedBrandIds(viewerId) : Promise.resolve([]),
+  ]);
+  const items = interleaveFeed(duels, soloPitchItems, followedBrandIds);
   return { items: items.slice(offset, offset + limit), total: items.length };
 }
 
