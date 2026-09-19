@@ -11,6 +11,19 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/admin/migrate": ["./drizzle/**/*"],
   },
+  // Every video upload (Solo-Pitch, Duell-Video, Kontern, Reaktion, Casting-/
+  // Creator-Einreichung) submits its File through a Server Action, and
+  // Next's default Server Action body limit is 1MB — far under the app's
+  // own 50MB video-size checks (MAX_VIDEO_BYTES in the relevant actions).
+  // Without this, every real (non-trivially-small) video upload fails
+  // before the action code ever runs — found 2026-09-19 when a real device
+  // upload silently failed with a generic browser error, not one of this
+  // app's own validation messages.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "60mb",
+    },
+  },
 };
 
 export default nextConfig;
