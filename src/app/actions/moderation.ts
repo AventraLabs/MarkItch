@@ -1,26 +1,17 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/session";
 import {
   banUser,
-  isAdminEmail,
   removeReportedContent,
+  requireAdminUser,
   resolveReport,
   unbanUser,
   type ReportTargetType,
 } from "@/lib/moderation";
 
-async function requireAdmin() {
-  const user = await requireUser();
-  if (!isAdminEmail(user.email)) {
-    redirect("/");
-  }
-}
-
 export async function resolveReportAction(formData: FormData) {
-  await requireAdmin();
+  await requireAdminUser();
   const reportId = formData.get("reportId");
   if (typeof reportId !== "string" || !reportId) return;
   await resolveReport(reportId);
@@ -29,7 +20,7 @@ export async function resolveReportAction(formData: FormData) {
 
 /** Deletes/nulls the reported content itself, then resolves the report. */
 export async function removeContentAction(formData: FormData) {
-  await requireAdmin();
+  await requireAdminUser();
   const reportId = formData.get("reportId");
   const targetType = formData.get("targetType");
   const targetId = formData.get("targetId");
@@ -43,7 +34,7 @@ export async function removeContentAction(formData: FormData) {
 
 /** Bans the content's owner and, if called from a report row, resolves that report too. */
 export async function banUserAction(formData: FormData) {
-  await requireAdmin();
+  await requireAdminUser();
   const userId = formData.get("userId");
   if (typeof userId !== "string" || !userId) return;
   await banUser(userId);
@@ -53,7 +44,7 @@ export async function banUserAction(formData: FormData) {
 }
 
 export async function unbanUserAction(formData: FormData) {
-  await requireAdmin();
+  await requireAdminUser();
   const userId = formData.get("userId");
   if (typeof userId !== "string" || !userId) return;
   await unbanUser(userId);

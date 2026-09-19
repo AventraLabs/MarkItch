@@ -11,6 +11,7 @@ import { VOTING_WINDOW_MS } from "@/lib/battle-format";
 import { finalizeAndNotifyBattle } from "@/lib/battle-notify";
 import { getAllSoloPitches } from "@/lib/solo-pitch";
 import { getReactionCounts } from "@/lib/reaction";
+import { getActiveBoostedSoloPitchIds } from "@/lib/boost";
 
 // Phase 9.1 — one feed entry per Duell (battle), not per side.
 //
@@ -245,6 +246,8 @@ export type FeedSoloPitch = {
   commentCount: number;
   reactionCount: number;
   createdAt: string; // ISO
+  /** Phase 26: an active, paid-for ranking bump — see boost.ts. Shown as a small badge to everyone, not just the owner. */
+  boosted: boolean;
 };
 
 export type FeedItem = FeedDuel | FeedSoloPitch;
@@ -254,13 +257,14 @@ async function buildFeedSoloPitches(viewerId: string | null): Promise<FeedSoloPi
   if (pitches.length === 0) return [];
 
   const ids = pitches.map((p) => p.id);
-  const [likeCounts, commentCounts, reactionCounts, viewerLikedIds, viewerBrand, followedBrandIds] = await Promise.all([
+  const [likeCounts, commentCounts, reactionCounts, viewerLikedIds, viewerBrand, followedBrandIds, boostedIds] = await Promise.all([
     getSoloPitchLikeCounts(ids),
     getCommentCountsForSoloPitches(ids),
     getReactionCounts(ids),
     viewerId ? getUserLikedSoloPitchIds(viewerId, ids) : Promise.resolve(new Set<string>()),
     viewerId ? getBrandForUser(viewerId) : Promise.resolve(null),
     viewerId ? getFollowedBrandIds(viewerId) : Promise.resolve([]),
+    getActiveBoostedSoloPitchIds(ids),
   ]);
   const followedSet = new Set(followedBrandIds);
 
@@ -281,6 +285,7 @@ async function buildFeedSoloPitches(viewerId: string | null): Promise<FeedSoloPi
     commentCount: commentCounts.get(pitch.id) ?? 0,
     reactionCount: reactionCounts.get(pitch.id) ?? 0,
     createdAt: pitch.createdAt.toISOString(),
+    boosted: boostedIds.has(pitch.id),
   }));
 }
 
@@ -302,14 +307,14 @@ const SOLO_INTERLEAVE_EVERY = 3;
 function interleaveFeed(duels: FeedDuel[], soloPitchItems: FeedSoloPitch[], followedBrandIds: string[]): FeedItem[] {
   const followedSet = new Set(followedBrandIds);
   const rankedDuels = [...duels].sort((a, b) => trendingScoreForDuel(b, followedSet) - trendingScoreForDuel(a, followedSet));
-  // Same "nudge, not override" idea as Duelle: a followed brand's fresh
-  // pitch is bucketed ahead of unfollowed ones, but still loses to an even
-  // fresher followed pitch — recency inside each bucket is untouched, so
-  // the Phase 21 "newest first" guarantee for solo pitches still holds.
+  // Same "nudge, not override" idea as Duelle: a paid Boost (Phase 26) ranks
+  // ahead of a followed brand's pitch, which ranks ahead of everything else
+  // — but recency inside each bucket is untouched, so the Phase 21 "newest
+  // first" guarantee for solo pitches still holds within any one bucket.
+  const soloBucket = (p: FeedSoloPitch) => (p.boosted ? 0 : followedSet.has(p.brandId) ? 1 : 2);
   const freshSolos = [...soloPitchItems].sort((a, b) => {
-    const aFollowed = followedSet.has(a.brandId) ? 0 : 1;
-    const bFollowed = followedSet.has(b.brandId) ? 0 : 1;
-    if (aFollowed !== bFollowed) return aFollowed - bFollowed;
+    const bucketDiff = soloBucket(a) - soloBucket(b);
+    if (bucketDiff !== 0) return bucketDiff;
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 

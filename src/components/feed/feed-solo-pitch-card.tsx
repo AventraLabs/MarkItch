@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { FollowButton } from "@/components/brand/follow-button";
 import { PitchChallengeButton } from "@/components/pitches/pitch-challenge-button";
+import { BoostButton } from "@/components/pitches/boost-button";
 import { ReportButton } from "@/components/moderation/report-button";
 import type { FeedSoloPitch } from "@/lib/feed";
 import { trackAnalyticsEvent } from "@/lib/analytics-client";
@@ -100,8 +101,12 @@ export function FeedSoloPitchCard({
             <FollowButton brandId={pitch.brandId} isFollowing={pitch.viewerFollowsBrand} />
           )}
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-zinc-300">Solo-Pitch</span>
+          {pitch.boosted && (
+            <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-medium text-orange-400">🚀 Boost</span>
+          )}
         </div>
         {viewerHasOtherBrand && <PitchChallengeButton soloPitchId={pitch.soloPitchId} />}
+        {pitch.viewerOwnsThisBrand && <BoostButton soloPitchId={pitch.soloPitchId} />}
       </div>
 
       <div className="pointer-events-auto absolute bottom-40 right-3 flex flex-col items-center gap-5">

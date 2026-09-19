@@ -1,6 +1,8 @@
 import "server-only";
 import { desc, eq, isNotNull } from "drizzle-orm";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
+import { requireUser } from "@/lib/session";
 import {
   battles,
   brandMembers,
@@ -63,6 +65,15 @@ export function isAdminEmail(email: string | null | undefined): boolean {
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
   return allowlist.includes(email.toLowerCase());
+}
+
+/** Shared gate for every /admin/* page and server action — bounces anyone not on the ADMIN_EMAILS allowlist back to the feed. */
+export async function requireAdminUser() {
+  const user = await requireUser();
+  if (!isAdminEmail(user.email)) {
+    redirect("/");
+  }
+  return user;
 }
 
 export async function submitReport(input: {

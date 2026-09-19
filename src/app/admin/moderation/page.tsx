@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/session";
-import { getBannedUsers, getOpenReports, isAdminEmail } from "@/lib/moderation";
+import Link from "next/link";
+import { getBannedUsers, getOpenReports, requireAdminUser } from "@/lib/moderation";
 import { banUserAction, removeContentAction, resolveReportAction, unbanUserAction } from "@/app/actions/moderation";
 
 const REMOVABLE_TYPES = new Set(["solo_pitch", "reaction", "comment", "battle_a", "battle_b", "casting_submission", "creator_submission"]);
@@ -10,16 +9,18 @@ const REMOVABLE_TYPES = new Set(["solo_pitch", "reaction", "comment", "battle_a"
  * page, no need for a full permission system yet.
  */
 export default async function ModerationPage() {
-  const user = await requireUser();
-  if (!isAdminEmail(user.email)) {
-    redirect("/");
-  }
+  await requireAdminUser();
 
   const [reports, bannedUsers] = await Promise.all([getOpenReports(), getBannedUsers()]);
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-16">
-      <h1 className="mb-6 text-2xl font-bold text-white">Moderation</h1>
+      <div className="mb-6 flex items-center gap-4">
+        <h1 className="text-2xl font-bold text-white">Moderation</h1>
+        <Link href="/admin/boosts" className="text-sm text-zinc-500 hover:text-zinc-300">
+          Boosts →
+        </Link>
+      </div>
 
       <section className="mb-10">
         <h2 className="mb-4 text-lg font-semibold text-white">

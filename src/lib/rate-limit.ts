@@ -22,7 +22,8 @@ export type RateLimitBucket =
   | "casting-vote"
   | "creator-submit"
   | "creator-vote"
-  | "report";
+  | "report"
+  | "boost-request";
 
 const LIMITS: Record<RateLimitBucket, { max: number; windowMs: number }> = {
   register: { max: 5, windowMs: 60 * 60 * 1000 }, // 5 Registrierungen/Stunde pro IP
@@ -36,6 +37,7 @@ const LIMITS: Record<RateLimitBucket, { max: number; windowMs: number }> = {
   "creator-submit": { max: 10, windowMs: 24 * 60 * 60 * 1000 }, // 10 Creator-Videos/Tag pro Marke
   "creator-vote": { max: 40, windowMs: 60 * 60 * 1000 }, // 40 Creator-Chart-Stimmen/Stunde pro IP
   report: { max: 20, windowMs: 60 * 60 * 1000 }, // 20 Meldungen/Stunde pro Nutzer
+  "boost-request": { max: 5, windowMs: 60 * 60 * 1000 }, // 5 Boost-Anfragen/Stunde pro Marke
 };
 
 /**

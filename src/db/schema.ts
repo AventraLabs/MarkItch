@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, uniqueIndex, index, integer } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // Phase 1: just what real authentication needs.
@@ -636,3 +636,31 @@ export const reports = pgTable("reports", {
 
 export type Report = typeof reports.$inferSelect;
 export type NewReport = typeof reports.$inferInsert;
+
+// Phase 26: Boost. A brand pays to give one of its own Solo-Pitches a
+// temporary visibility bump in the "Für dich"-Feed-Ranking (see
+// FOLLOW_BOOST/BOOST_MULTIPLIER in feed.ts) — the platform's first paid
+// feature. No payment processor wired up yet (see CLAUDE-CODE-UEBERGABE.md):
+// a request lands here as 'pending', Luca confirms payment happened
+// off-platform (bank transfer/invoice for now) and activates it by hand via
+// /admin/boosts. `priceCents` is stored per row (not read from a shared
+// constant at render time) so a later price change never rewrites history.
+export const boosts = pgTable("boosts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  brandId: uuid("brand_id")
+    .notNull()
+    .references(() => brands.id, { onDelete: "cascade" }),
+  soloPitchId: uuid("solo_pitch_id")
+    .notNull()
+    .references(() => soloPitches.id, { onDelete: "cascade" }),
+  priceCents: integer("price_cents").notNull(),
+  // 'pending' | 'active' | 'rejected' — 'expired' is derived from
+  // expiresAt at read time, not stored (same philosophy as battle-stage.ts).
+  status: text("status").notNull().default("pending"),
+  requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+  activatedAt: timestamp("activated_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+});
+
+export type Boost = typeof boosts.$inferSelect;
+export type NewBoost = typeof boosts.$inferInsert;
