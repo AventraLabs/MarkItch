@@ -3,6 +3,8 @@ import "./globals.css";
 import { getOptionalUser } from "@/lib/session";
 import { getUnreadNotificationCount } from "@/lib/notification";
 import { BottomNav } from "@/components/nav/bottom-nav";
+import { NotificationBellButton } from "@/components/nav/notification-bell-button";
+import { SplashScreen } from "@/components/splash-screen";
 
 export const metadata: Metadata = {
   title: "MarkItch",
@@ -16,8 +18,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="de" className="h-full antialiased dark">
       <body className="flex min-h-full flex-col bg-black text-white font-sans">
+        <SplashScreen />
         {children}
-        <BottomNav isLoggedIn={Boolean(user)} unreadCount={unreadCount} />
+        <NotificationBellButton isLoggedIn={Boolean(user)} unreadCount={unreadCount} />
+        <BottomNav isLoggedIn={Boolean(user)} />
       </body>
     </html>
   );

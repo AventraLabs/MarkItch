@@ -306,6 +306,31 @@ async function buildFeedSoloPitches(viewerId: string | null): Promise<FeedSoloPi
 
 export type FeedPage = { items: FeedItem[]; total: number };
 
+export type TrendingSoloPitch = { soloPitchId: string; brandName: string; brandSlug: string; videoUrl: string; likeCount: number };
+
+/**
+ * Phase 28: the "Suche" tab's Explore-style strip (Instagram convention —
+ * trending content alongside the search itself). Anonymous scoring (no
+ * viewer-specific follow/boost bonus) since this isn't the ranked "Für
+ * dich"-Feed, just "what's hot right now" for anyone browsing.
+ */
+export async function getTrendingSoloPitches(limit = 12): Promise<TrendingSoloPitch[]> {
+  const pitches = await buildFeedSoloPitches(null);
+  const scored = pitches.map((pitch) => {
+    const ageHours = Math.max(0, (Date.now() - new Date(pitch.createdAt).getTime()) / (60 * 60 * 1000));
+    const engagement = pitch.likeCount + pitch.commentCount * 1.5 + pitch.reactionCount * 2;
+    return { pitch, score: scoreFromEngagement(engagement, ageHours) };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit).map(({ pitch }) => ({
+    soloPitchId: pitch.soloPitchId,
+    brandName: pitch.brandName,
+    brandSlug: pitch.brandSlug,
+    videoUrl: pitch.videoUrl,
+    likeCount: pitch.likeCount,
+  }));
+}
+
 // Phase 21: a blended single trending score (see git history) quietly
 // buried solo pitches — a Duell's vote count (weighted ×2, and
 // accumulating over its whole week-long voting window) almost always

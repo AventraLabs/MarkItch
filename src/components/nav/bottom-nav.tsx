@@ -2,42 +2,39 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Mic, Building2, Bell, User, Plus, type LucideIcon } from "lucide-react";
+import { Home, Mic, Search, User, Plus, type LucideIcon } from "lucide-react";
 
 // Phase 12d: real line icons instead of emoji. Emoji render inconsistently
 // across platforms (different weight/style per OS, some look like clip art)
 // and read as a prototype, not a serious product — TikTok, Instagram etc.
 // all use a single consistent icon set instead. lucide-react gives us that:
 // one stroke width, one visual language, crisp at any size.
+//
+// Phase 28: "Marken" became a Suche tab (Instagram's magnifying-glass
+// convention — /brands now doubles as search + trending, see that page)
+// and notifications moved to a corner icon (notification-bell-button.tsx),
+// freeing this down to 5 slots so "+" actually lands dead center.
 const TABS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/", label: "Feed", icon: Home },
   { href: "/pitches", label: "Pitches", icon: Mic },
-  { href: "/brands", label: "Marken", icon: Building2 },
 ];
 
-export function BottomNav({ isLoggedIn, unreadCount = 0 }: { isLoggedIn: boolean; unreadCount?: number }) {
+export function BottomNav({ isLoggedIn }: { isLoggedIn: boolean }) {
   const pathname = usePathname();
+  const searchTab = { href: "/brands", label: "Suche", icon: Search };
   // Phase 21: a real "+" tab, TikTok/Instagram-style — every posting action
   // (Solo-Pitch, Creator-Video, Partner-Casting) lives behind this one
   // entry point now instead of being buried as forms inside /profile. See
   // src/app/post/page.tsx for the picker itself.
   const postTab = { href: isLoggedIn ? "/post" : "/login", label: "Posten", icon: Plus };
-  // Phase 10: a real destination for reminders/notifications, not just a
-  // block buried in Profile — see /notifications.
-  const notificationsTab = {
-    href: isLoggedIn ? "/notifications" : "/login",
-    label: "Erinnerungen",
-    icon: Bell,
-  };
   const profileTab = { href: isLoggedIn ? "/profile" : "/login", label: isLoggedIn ? "Profil" : "Anmelden", icon: User };
 
-  const allTabs = [...TABS, postTab, notificationsTab, profileTab];
+  const allTabs = [...TABS, searchTab, postTab, profileTab];
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t border-white/10 bg-black/70 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
       {allTabs.map((tab) => {
         const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
-        const showBadge = tab === notificationsTab && isLoggedIn && unreadCount > 0;
         const Icon = tab.icon;
 
         if (tab === postTab) {
@@ -59,14 +56,7 @@ export function BottomNav({ isLoggedIn, unreadCount = 0 }: { isLoggedIn: boolean
               active ? "text-orange-500" : "text-zinc-400"
             }`}
           >
-            <span className="relative">
-              <Icon size={23} strokeWidth={active ? 2.25 : 1.75} />
-              {showBadge && (
-                <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-bold text-white">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </span>
+            <Icon size={23} strokeWidth={active ? 2.25 : 1.75} />
             {tab.label}
           </Link>
         );
