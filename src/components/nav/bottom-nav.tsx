@@ -29,7 +29,9 @@ export function BottomNav({ isLoggedIn }: { isLoggedIn: boolean }) {
   const postTab = { href: isLoggedIn ? "/post" : "/login", label: "Posten", icon: Plus };
   const profileTab = { href: isLoggedIn ? "/profile" : "/login", label: isLoggedIn ? "Profil" : "Anmelden", icon: User };
 
-  const allTabs = [...TABS, searchTab, postTab, profileTab];
+  // Phase 33: Posten belongs dead center (Luca) — Suche and Posten swapped
+  // so it's the 3rd of 5 slots, not the 4th.
+  const allTabs = [...TABS, postTab, searchTab, profileTab];
 
   return (
     // Phase 30: left-1/2 + -translate-x-1/2 + max-w instead of inset-x-0 —

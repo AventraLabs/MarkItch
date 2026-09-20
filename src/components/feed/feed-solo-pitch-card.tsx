@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Heart, MessageCircle, Repeat2, Rocket, Share2, Play, Volume2, VolumeX, X } from "lucide-react";
 import { FollowButton } from "@/components/brand/follow-button";
 import { PitchChallengeButton } from "@/components/pitches/pitch-challenge-button";
 import { BoostButton } from "@/components/pitches/boost-button";
@@ -103,15 +104,15 @@ export function FeedSoloPitchCard({
 
       {manuallyPaused && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-black/50 text-3xl text-white">
-            ▶
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-black/50 text-white">
+            <Play size={28} fill="currentColor" />
           </span>
           <button
             onClick={onToggleMute}
             aria-label={muted ? "Ton an" : "Ton aus"}
-            className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-lg text-white"
+            className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
           >
-            {muted ? "🔇" : "🔊"}
+            {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
         </div>
       )}
@@ -120,9 +121,9 @@ export function FeedSoloPitchCard({
         <button
           onClick={onClose}
           aria-label="Schließen"
-          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-lg text-white"
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white"
         >
-          ✕
+          <X size={18} />
         </button>
       )}
 
@@ -136,7 +137,9 @@ export function FeedSoloPitchCard({
           )}
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-zinc-300">Solo-Pitch</span>
           {pitch.boosted && (
-            <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-medium text-orange-400">🚀 Boost</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-medium text-orange-400">
+              <Rocket size={11} /> Boost
+            </span>
           )}
         </div>
         {pitch.description && <p className="mb-2 text-sm text-white/90">{pitch.description}</p>}
@@ -157,26 +160,26 @@ export function FeedSoloPitchCard({
       <div className="pointer-events-auto absolute bottom-40 right-3 flex flex-col items-center gap-5">
         <button
           onClick={() => (isLoggedIn ? onToggleLike(pitch) : (window.location.href = "/login"))}
-          className="flex flex-col items-center gap-1"
+          className="flex flex-col items-center gap-1 text-white"
           aria-label="Like"
         >
-          <span className="text-3xl">{pitch.viewerLiked ? "❤️" : "🤍"}</span>
-          <span className="text-xs font-medium text-white">{pitch.likeCount}</span>
+          <Heart size={30} className={pitch.viewerLiked ? "fill-red-500 text-red-500" : ""} />
+          <span className="text-xs font-medium">{pitch.likeCount}</span>
         </button>
 
-        <button onClick={() => onOpenComments(pitch.soloPitchId)} className="flex flex-col items-center gap-1">
-          <span className="text-3xl">💬</span>
-          <span className="text-xs font-medium text-white">{pitch.commentCount}</span>
+        <button onClick={() => onOpenComments(pitch.soloPitchId)} className="flex flex-col items-center gap-1 text-white">
+          <MessageCircle size={28} />
+          <span className="text-xs font-medium">{pitch.commentCount}</span>
         </button>
 
-        <button onClick={() => onOpenReactions(pitch.soloPitchId)} className="flex flex-col items-center gap-1">
-          <span className="text-3xl">🔁</span>
-          <span className="text-xs font-medium text-white">{pitch.reactionCount}</span>
+        <button onClick={() => onOpenReactions(pitch.soloPitchId)} className="flex flex-col items-center gap-1 text-white">
+          <Repeat2 size={28} />
+          <span className="text-xs font-medium">{pitch.reactionCount}</span>
         </button>
 
-        <button onClick={handleShare} className="flex flex-col items-center gap-1">
-          <span className="text-3xl">↗️</span>
-          <span className="text-xs font-medium text-white">{shareLabel ? "Kopiert" : "Teilen"}</span>
+        <button onClick={handleShare} className="flex flex-col items-center gap-1 text-white">
+          <Share2 size={26} />
+          <span className="text-xs font-medium">{shareLabel ? "Kopiert" : "Teilen"}</span>
         </button>
 
         {pitch.viewerOwnsThisBrand ? (

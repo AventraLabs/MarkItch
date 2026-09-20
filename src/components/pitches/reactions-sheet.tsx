@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { Heart, X } from "lucide-react";
 import type { ReactionWithBrand } from "@/lib/reaction";
 import { ReactionUploadForm } from "@/components/pitches/reaction-upload-form";
 import { PromoteReactionButton } from "@/components/pitches/promote-reaction-button";
 import { ReportButton } from "@/components/moderation/report-button";
+import { VideoPlayer } from "@/components/brand/video-player";
 
 type ReactionRow = Omit<ReactionWithBrand, "createdAt"> & { createdAt: string };
 
@@ -73,8 +75,8 @@ export function ReactionsSheet({
           <h2 className="text-sm font-semibold text-white">
             Reaktionen {reactions && reactions.length > 0 ? `(${reactions.length})` : ""}
           </h2>
-          <button onClick={onClose} aria-label="Schließen" className="text-lg text-zinc-500 hover:text-white">
-            ✕
+          <button onClick={onClose} aria-label="Schließen" className="text-zinc-500 hover:text-white">
+            <X size={18} />
           </button>
         </div>
 
@@ -97,20 +99,16 @@ export function ReactionsSheet({
                       </Link>
                     )}
                   </div>
-                  <video
-                    src={r.videoUrl}
-                    className="mb-2 max-h-64 w-full rounded-lg bg-black object-contain"
-                    controls
-                    playsInline
-                    preload="metadata"
-                  />
+                  <div className="mx-auto mb-2 max-w-[220px]">
+                    <VideoPlayer src={r.videoUrl} />
+                  </div>
                   <div className="flex items-center justify-between gap-2">
                     <button
                       onClick={() => (isLoggedIn ? handleToggleLike(r.id) : (window.location.href = "/login"))}
-                      className="flex items-center gap-1 text-sm"
+                      className="flex items-center gap-1 text-sm text-white"
                     >
-                      <span>{r.viewerLiked ? "❤️" : "🤍"}</span>
-                      <span className="text-xs font-medium text-white">{r.likeCount}</span>
+                      <Heart size={18} className={r.viewerLiked ? "fill-red-500 text-red-500" : ""} />
+                      <span className="text-xs font-medium">{r.likeCount}</span>
                     </button>
                     {canPromote && !r.promotedToBattleId && <PromoteReactionButton reactionId={r.id} />}
                     <ReportButton targetType="reaction" targetId={r.id} isLoggedIn={isLoggedIn} variant="text" />

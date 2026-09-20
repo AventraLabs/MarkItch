@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Flag, X } from "lucide-react";
 import type { ReportTargetType } from "@/lib/moderation";
 
 const REPORT_REASONS = [
@@ -61,9 +62,9 @@ export function ReportButton({
   return (
     <>
       {variant === "icon" ? (
-        <button onClick={openSheet} className="flex flex-col items-center gap-1" aria-label="Melden">
-          <span className="text-3xl">🚩</span>
-          <span className="text-xs font-medium text-white">Melden</span>
+        <button onClick={openSheet} className="flex flex-col items-center gap-1 text-white" aria-label="Melden">
+          <Flag size={28} />
+          <span className="text-xs font-medium">Melden</span>
         </button>
       ) : (
         <button onClick={openSheet} className="text-xs text-zinc-500 hover:text-zinc-300">
@@ -92,8 +93,8 @@ export function ReportButton({
               <>
                 <div className="mb-3 flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-white">Inhalt melden</h2>
-                  <button onClick={() => setOpen(false)} aria-label="Schließen" className="text-lg text-zinc-500 hover:text-white">
-                    ✕
+                  <button onClick={() => setOpen(false)} aria-label="Schließen" className="text-zinc-500 hover:text-white">
+                    <X size={18} />
                   </button>
                 </div>
                 <div className="space-y-1.5">

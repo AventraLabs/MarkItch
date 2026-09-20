@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Camera, Check, FolderOpen } from "lucide-react";
 import { ALLOWED_VIDEO_TYPES, MAX_VIDEO_BYTES, type VideoUploadFolder } from "@/lib/video-constants";
 
 type UploadState = "idle" | "uploading" | "done" | "error";
@@ -136,20 +137,24 @@ export function VideoPickerInput({
         <button
           type="button"
           onClick={() => open(true)}
-          className="flex-1 rounded-lg border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-200 hover:border-orange-400 hover:text-orange-400"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-200 hover:border-orange-400 hover:text-orange-400"
         >
-          🎥 {previewUrl ? "Neu filmen" : "Jetzt filmen"}
+          <Camera size={16} /> {previewUrl ? "Neu filmen" : "Jetzt filmen"}
         </button>
         <button
           type="button"
           onClick={() => open(false)}
-          className="flex-1 rounded-lg border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-200 hover:border-orange-400 hover:text-orange-400"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-200 hover:border-orange-400 hover:text-orange-400"
         >
-          📁 {previewUrl ? "Anderes Video" : "Datei wählen"}
+          <FolderOpen size={16} /> {previewUrl ? "Anderes Video" : "Datei wählen"}
         </button>
       </div>
       {!previewUrl && <p className="mt-1.5 text-xs text-zinc-500">Keine Datei ausgewählt</p>}
-      {status === "done" && <p className="mt-1.5 text-xs text-green-500">✓ Hochgeladen</p>}
+      {status === "done" && (
+        <p className="mt-1.5 inline-flex items-center gap-1 text-xs text-green-500">
+          <Check size={13} /> Hochgeladen
+        </p>
+      )}
       {error && <p className="mt-1.5 text-xs text-red-400">{error}</p>}
     </div>
   );

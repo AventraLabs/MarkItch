@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { X } from "lucide-react";
 import type { CommentWithAuthor } from "@/lib/comment";
 import { ReportButton } from "@/components/moderation/report-button";
 
@@ -94,8 +95,8 @@ export function CommentSheet({
           <h2 className="text-sm font-semibold text-white">
             Kommentare {comments && comments.length > 0 ? `(${comments.length})` : ""}
           </h2>
-          <button onClick={onClose} aria-label="Schließen" className="text-lg text-zinc-500 hover:text-white">
-            ✕
+          <button onClick={onClose} aria-label="Schließen" className="text-zinc-500 hover:text-white">
+            <X size={18} />
           </button>
         </div>
 

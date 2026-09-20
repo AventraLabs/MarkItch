@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Rocket, X } from "lucide-react";
 import type { BoostStatus } from "@/lib/boost";
 
 type StatusResponse = {
@@ -64,9 +65,9 @@ export function BoostButton({ soloPitchId }: { soloPitchId: string }) {
     <>
       <button
         onClick={openSheet}
-        className="rounded-full border border-orange-500/50 bg-orange-500/10 px-3 py-1.5 text-xs font-semibold text-orange-400 hover:bg-orange-500/20"
+        className="inline-flex items-center gap-1 rounded-full border border-orange-500/50 bg-orange-500/10 px-3 py-1.5 text-xs font-semibold text-orange-400 hover:bg-orange-500/20"
       >
-        🚀 Boosten
+        <Rocket size={13} /> Boosten
       </button>
 
       {open && (
@@ -77,8 +78,8 @@ export function BoostButton({ soloPitchId }: { soloPitchId: string }) {
           >
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-white">Pitch boosten</h2>
-              <button onClick={() => setOpen(false)} aria-label="Schließen" className="text-lg text-zinc-500 hover:text-white">
-                ✕
+              <button onClick={() => setOpen(false)} aria-label="Schließen" className="text-zinc-500 hover:text-white">
+                <X size={18} />
               </button>
             </div>
 
@@ -93,7 +94,9 @@ export function BoostButton({ soloPitchId }: { soloPitchId: string }) {
               </div>
             ) : data?.boost?.status === "active" ? (
               <div className="text-sm text-zinc-300">
-                <p className="mb-1 font-medium text-orange-400">🚀 Boost ist aktiv.</p>
+                <p className="mb-1 inline-flex items-center gap-1 font-medium text-orange-400">
+                  <Rocket size={14} /> Boost ist aktiv.
+                </p>
                 {data.boost.expiresAt && (
                   <p className="text-zinc-400">Läuft bis {new Date(data.boost.expiresAt).toLocaleString("de-AT")}.</p>
                 )}

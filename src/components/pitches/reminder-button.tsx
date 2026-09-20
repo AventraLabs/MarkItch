@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { Bell, Check } from "lucide-react";
 import { toggleReminder, type ReminderFormState } from "@/app/actions/reminder";
 
 function ToggleButton({ hasReminder }: { hasReminder: boolean }) {
@@ -11,13 +12,23 @@ function ToggleButton({ hasReminder }: { hasReminder: boolean }) {
       type="submit"
       disabled={pending}
       className={
-        "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 " +
+        "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 " +
         (hasReminder
           ? "border border-orange-500/40 bg-orange-500/10 text-orange-400 hover:border-red-500 hover:text-red-400"
           : "border border-zinc-700 text-zinc-300 hover:border-orange-400 hover:text-orange-400")
       }
     >
-      {pending ? "…" : hasReminder ? "🔔 Erinnert ✓" : "🔔 Erinnern"}
+      {pending ? (
+        "…"
+      ) : hasReminder ? (
+        <>
+          <Bell size={13} /> Erinnert <Check size={13} />
+        </>
+      ) : (
+        <>
+          <Bell size={13} /> Erinnern
+        </>
+      )}
     </button>
   );
 }

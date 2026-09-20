@@ -2,6 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import {
+  ArrowLeftRight,
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  MessageCircle,
+  Play,
+  RefreshCw,
+  Share2,
+  Trophy,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { FollowButton } from "@/components/brand/follow-button";
 import { ReportButton } from "@/components/moderation/report-button";
 import type { FeedDuel } from "@/lib/feed";
@@ -13,21 +26,26 @@ function timeLeftLabel(iso: string): string {
   return `${Math.max(1, Math.ceil(hoursLeft))}h`;
 }
 
-function outcomeLabel(sideIndex: 0 | 1, tally: FeedDuel["tally"]): string | null {
+function outcomeLabel(sideIndex: 0 | 1, tally: FeedDuel["tally"]): { label: string; won: boolean } | null {
   if (tally.total === 0) return null;
-  if (tally.brandAVotes === tally.brandBVotes) return "Unentschieden";
+  if (tally.brandAVotes === tally.brandBVotes) return { label: "Unentschieden", won: false };
   const won = (sideIndex === 0 && tally.brandAVotes > tally.brandBVotes) || (sideIndex === 1 && tally.brandBVotes > tally.brandAVotes);
-  return won ? "🏆 Gewonnen" : "Verloren";
+  return { label: won ? "Gewonnen" : "Verloren", won };
 }
 
-function ResultLine({ sideIndex, tally, prefix }: { sideIndex: 0 | 1; tally: FeedDuel["tally"]; prefix?: string }) {
+function ResultLine({ sideIndex, tally, prefix }: { sideIndex: 0 | 1; tally: FeedDuel["tally"]; prefix?: React.ReactNode }) {
   const sideVotes = sideIndex === 0 ? tally.brandAVotes : tally.brandBVotes;
   const pct = tally.total === 0 ? 0 : Math.round((sideVotes / tally.total) * 100);
   const outcome = outcomeLabel(sideIndex, tally);
   return (
-    <p className="text-xs text-zinc-300">
+    <p className="flex items-center gap-1 text-xs text-zinc-300">
       {prefix && <span className="text-zinc-500">{prefix} </span>}
-      {outcome && <span className="font-semibold text-orange-400">{outcome} · </span>}
+      {outcome && (
+        <span className="inline-flex items-center gap-1 font-semibold text-orange-400">
+          {outcome.won && <Trophy size={12} />}
+          {outcome.label} ·
+        </span>
+      )}
       {pct}% ({tally.total} {tally.total === 1 ? "Stimme" : "Stimmen"})
     </p>
   );
@@ -78,7 +96,17 @@ function VoteState({
 
   const hasDiverged = isFinished && officialTally && tally.total !== officialTally.total;
   const officialResult = isFinished && officialTally ? <ResultLine sideIndex={sideIndex} tally={officialTally} prefix="Ergebnis:" /> : null;
-  const liveDrift = hasDiverged ? <ResultLine sideIndex={sideIndex} tally={tally} prefix="🔄 Aktuell:" /> : null;
+  const liveDrift = hasDiverged ? (
+    <ResultLine
+      sideIndex={sideIndex}
+      tally={tally}
+      prefix={
+        <span className="inline-flex items-center gap-1">
+          <RefreshCw size={11} /> Aktuell:
+        </span>
+      }
+    />
+  ) : null;
 
   if (viewerVotedBrandId) {
     const votedForThis = viewerVotedBrandId === side.brandId;
@@ -105,9 +133,13 @@ function VoteState({
       <button
         onClick={onVote}
         disabled={voting}
-        className="rounded-full bg-orange-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-orange-500 disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-full bg-orange-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-orange-500 disabled:opacity-50"
       >
-        {voting ? "…" : `🏆 Für ${side.brandName} stimmen`}
+        {voting ? "…" : (
+          <>
+            <Trophy size={14} /> Für {side.brandName} stimmen
+          </>
+        )}
       </button>
       {!isFinished && (
         <p className="text-xs text-zinc-500">
@@ -278,15 +310,15 @@ export function FeedDuelCard({
 
       {manuallyPaused && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-black/50 text-3xl text-white">
-            ▶
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-black/50 text-white">
+            <Play size={28} fill="currentColor" />
           </span>
           <button
             onClick={onToggleMute}
             aria-label={muted ? "Ton an" : "Ton aus"}
-            className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-lg text-white"
+            className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
           >
-            {muted ? "🔇" : "🔊"}
+            {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
         </div>
       )}
@@ -298,10 +330,14 @@ export function FeedDuelCard({
         ))}
       </div>
       {sideIndex === 1 && (
-        <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-2xl text-white/50">‹</div>
+        <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-white/50">
+          <ChevronLeft size={28} />
+        </div>
       )}
       {sideIndex === 0 && (
-        <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-2xl text-white/50">›</div>
+        <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-white/50">
+          <ChevronRight size={28} />
+        </div>
       )}
 
       {/* Bottom info + vote (extra bottom padding clears the fixed BottomNav) */}
@@ -330,9 +366,9 @@ export function FeedDuelCard({
         <div className="pointer-events-auto mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-300">
           <button
             onClick={() => switchSide(sideIndex === 0 ? 1 : 0)}
-            className="rounded-full border border-white/20 px-2 py-1 text-orange-300 hover:border-orange-400"
+            className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2 py-1 text-orange-300 hover:border-orange-400"
           >
-            ↔ Antwort von {opponent.brandName} ansehen
+            <ArrowLeftRight size={12} /> Antwort von {opponent.brandName} ansehen
           </button>
         </div>
         <div className="pointer-events-auto">
@@ -344,21 +380,21 @@ export function FeedDuelCard({
       <div className="pointer-events-auto absolute bottom-40 right-3 flex flex-col items-center gap-5">
         <button
           onClick={() => (isLoggedIn ? onToggleLike(duel, sideIndex) : (window.location.href = "/login"))}
-          className="flex flex-col items-center gap-1"
+          className="flex flex-col items-center gap-1 text-white"
           aria-label="Like"
         >
-          <span className="text-3xl">{side.viewerLiked ? "❤️" : "🤍"}</span>
-          <span className="text-xs font-medium text-white">{side.likeCount}</span>
+          <Heart size={30} className={side.viewerLiked ? "fill-red-500 text-red-500" : ""} />
+          <span className="text-xs font-medium">{side.likeCount}</span>
         </button>
 
-        <button onClick={() => onOpenComments(duel.battleId)} className="flex flex-col items-center gap-1">
-          <span className="text-3xl">💬</span>
-          <span className="text-xs font-medium text-white">{duel.commentCount}</span>
+        <button onClick={() => onOpenComments(duel.battleId)} className="flex flex-col items-center gap-1 text-white">
+          <MessageCircle size={28} />
+          <span className="text-xs font-medium">{duel.commentCount}</span>
         </button>
 
-        <button onClick={handleShare} className="flex flex-col items-center gap-1">
-          <span className="text-3xl">↗️</span>
-          <span className="text-xs font-medium text-white">{shareLabel ? "Kopiert" : "Teilen"}</span>
+        <button onClick={handleShare} className="flex flex-col items-center gap-1 text-white">
+          <Share2 size={26} />
+          <span className="text-xs font-medium">{shareLabel ? "Kopiert" : "Teilen"}</span>
         </button>
 
         <ReportButton
