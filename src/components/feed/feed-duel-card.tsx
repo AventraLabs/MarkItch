@@ -145,6 +145,13 @@ export function FeedDuelCard({
   const [voting, setVoting] = useState(false);
   const [shareLabel, setShareLabel] = useState<string | null>(null);
   const trackedViewSides = useRef<Set<0 | 1>>(new Set());
+  // Phase 30: tap now pauses/resumes (Luca: "wie bei TikTok") instead of
+  // toggling mute — this is the viewer's own intent, separate from
+  // `inView`/`sideIndex`, which just gate whether playing is *allowed* at
+  // all. Reset to false on every side switch — swiping to the other side
+  // should autoplay it, same as TikTok's own next-video behavior.
+  const [manuallyPaused, setManuallyPaused] = useState(false);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const side = duel.sides[sideIndex];
   const opponent = duel.sides[sideIndex === 0 ? 1 : 0];
@@ -172,13 +179,18 @@ export function FeedDuelCard({
     videoRefs.current.forEach((video, i) => {
       if (!video) return;
       video.muted = muted;
-      if (inView && i === sideIndex) {
+      if (inView && i === sideIndex && !manuallyPaused) {
         video.play().catch(() => {});
       } else {
         video.pause();
       }
     });
-  }, [inView, sideIndex, muted]);
+  }, [inView, sideIndex, muted, manuallyPaused]);
+
+  function switchSide(next: 0 | 1) {
+    setSideIndex(next);
+    setManuallyPaused(false);
+  }
 
   // Phase 16: a "view" is this side's video actually playing on screen —
   // once per side per card, not per re-render (flipping back and forth
@@ -206,17 +218,34 @@ export function FeedDuelCard({
     setTimeout(() => setShareLabel(null), 1800);
   }
 
-  // Left third / right third = switch to that side, middle = mute toggle —
-  // same "tap zones" pattern as a two-panel story, chosen specifically
-  // because there are exactly two sides to a Duell (no next/prev list to
-  // page through, just "the other one").
-  function handleVideoClick(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const third = rect.width / 3;
-    if (x < third) setSideIndex(0);
-    else if (x > third * 2) setSideIndex(1);
-    else onToggleMute();
+  // Phase 30: swipe left/right between the two sides, tap to pause/resume —
+  // Luca's report that the old "left third / right third = switch, middle =
+  // mute" zones didn't match any real short-video app. Uses pointer events
+  // (unifies touch + mouse) on down/up only — never touchmove/preventDefault
+  // — so the page's own vertical scroll-snap between feed cards is never
+  // interfered with, only the gesture's *end* is classified.
+  const SWIPE_THRESHOLD_PX = 40;
+  const TAP_MAX_MOVEMENT_PX = 10;
+
+  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    touchStart.current = { x: e.clientX, y: e.clientY };
+  }
+
+  function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+
+    if (Math.abs(dx) < TAP_MAX_MOVEMENT_PX && Math.abs(dy) < TAP_MAX_MOVEMENT_PX) {
+      setManuallyPaused((p) => !p);
+      return;
+    }
+    if (Math.abs(dx) > SWIPE_THRESHOLD_PX && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0 && sideIndex === 0) switchSide(1);
+      else if (dx > 0 && sideIndex === 1) switchSide(0);
+    }
   }
 
   const stageLabel = duel.isFinished
@@ -245,12 +274,23 @@ export function FeedDuelCard({
           preload="metadata"
         />
       ))}
-      <div className="absolute inset-0" onClick={handleVideoClick} />
+      <div className="absolute inset-0" onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} />
 
-      {/* Mute hint */}
-      <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-black/40 px-2 py-1 text-xs text-white">
+      {manuallyPaused && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/50 text-3xl text-white">
+            ▶
+          </span>
+        </div>
+      )}
+
+      <button
+        onClick={onToggleMute}
+        aria-label={muted ? "Ton an" : "Ton aus"}
+        className="absolute right-4 top-4 rounded-full bg-black/40 px-2 py-1 text-xs text-white"
+      >
         {muted ? "🔇" : "🔊"}
-      </div>
+      </button>
 
       {/* Two-sides indicator + edge chevrons */}
       <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center gap-1.5">
@@ -290,7 +330,7 @@ export function FeedDuelCard({
         )}
         <div className="pointer-events-auto mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-300">
           <button
-            onClick={() => setSideIndex(sideIndex === 0 ? 1 : 0)}
+            onClick={() => switchSide(sideIndex === 0 ? 1 : 0)}
             className="rounded-full border border-white/20 px-2 py-1 text-orange-300 hover:border-orange-400"
           >
             ↔ Antwort von {opponent.brandName} ansehen
