@@ -4,10 +4,8 @@ import { refresh } from "next/cache";
 import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { postCreatorSubmission } from "@/lib/creator-charts";
-import { uploadVideo, ALLOWED_VIDEO_TYPES } from "@/lib/storage";
+import { readVideoUrlField } from "@/lib/storage";
 import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
-
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
 export type PostCreatorVideoFormState = { error?: string; success?: boolean } | undefined;
 
@@ -34,15 +32,9 @@ export async function postCreatorVideo(
     return { error: "Bitte wähle die Marke aus, für die das Video ist." };
   }
 
-  const file = formData.get("video");
-  if (!(file instanceof File) || file.size === 0) {
-    return { error: "Bitte ein Video auswählen." };
-  }
-  if (file.size > MAX_VIDEO_BYTES) {
-    return { error: "Video darf maximal 50 MB groß sein." };
-  }
-  if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
-    return { error: "Erlaubt: MP4, WEBM oder MOV." };
+  const video = readVideoUrlField(formData, "creator-videos");
+  if ("error" in video) {
+    return { error: video.error };
   }
 
   const { allowed } = await checkRateLimit("creator-submit", myBrand.id);
@@ -50,8 +42,7 @@ export async function postCreatorVideo(
     return { error: RATE_LIMIT_MESSAGE };
   }
 
-  const uploaded = await uploadVideo(file, "creator-videos");
-  const result = await postCreatorSubmission(myBrand.id, targetBrandId, uploaded.url);
+  const result = await postCreatorSubmission(myBrand.id, targetBrandId, video.videoUrl);
   if (result.error) return { error: result.error };
 
   refresh();

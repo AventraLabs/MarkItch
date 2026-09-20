@@ -1,20 +1,25 @@
 "use client";
 
-import { useActionState, useRef, useState, type FormEvent } from "react";
+import { useActionState, useState, type FormEvent } from "react";
 import { postCreatorVideo, type PostCreatorVideoFormState } from "@/app/actions/creator-charts";
 import { FormError, FormSuccess, SubmitButton } from "@/components/ui";
 import { VideoPickerInput } from "@/components/video-picker-input";
 
 export function CreatorVideoUploadForm({ brands }: { brands: { id: string; name: string }[] }) {
   const [state, action] = useActionState<PostCreatorVideoFormState, FormData>(postCreatorVideo, undefined);
-  const formRef = useRef<HTMLFormElement>(null);
   const [clientError, setClientError] = useState<string | null>(null);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoUploaded, setVideoUploaded] = useState(false);
 
-  // Phase 27.1: catch "kein Video" before the action fires — a file input
-  // can never be refilled after a server round trip, see solo-pitch-upload-form.tsx.
+  // Phase 29: the video is already uploaded (directly to storage, see
+  // video-picker-input.tsx) by the time this fires.
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    const video = formRef.current?.elements.namedItem("video") as HTMLInputElement | null;
-    if (!video?.files?.length) {
+    if (videoUploading) {
+      e.preventDefault();
+      setClientError("Video wird noch hochgeladen — kurz warten.");
+      return;
+    }
+    if (!videoUploaded) {
       e.preventDefault();
       setClientError("Bitte zuerst ein Video auswählen.");
       return;
@@ -23,7 +28,7 @@ export function CreatorVideoUploadForm({ brands }: { brands: { id: string; name:
   }
 
   return (
-    <form ref={formRef} action={action} onSubmit={handleSubmit}>
+    <form action={action} onSubmit={handleSubmit}>
       <FormError message={clientError ?? state?.error} />
       {state?.success && <FormSuccess message="Video gepostet — läuft jetzt in den Creator-Charts dieser Marke." />}
       <select
@@ -41,7 +46,13 @@ export function CreatorVideoUploadForm({ brands }: { brands: { id: string; name:
           </option>
         ))}
       </select>
-      <VideoPickerInput />
+      <VideoPickerInput
+        folder="creator-videos"
+        onUploadStateChange={({ uploading, uploadedUrl }) => {
+          setVideoUploading(uploading);
+          setVideoUploaded(Boolean(uploadedUrl));
+        }}
+      />
       <SubmitButton>Video posten</SubmitButton>
     </form>
   );

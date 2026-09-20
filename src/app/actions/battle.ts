@@ -9,25 +9,9 @@ import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { getExistingOpenBattle } from "@/lib/battle";
 import { activateBattleIfBothSidesReady } from "@/lib/battle-stage";
-import { uploadVideo, ALLOWED_VIDEO_TYPES } from "@/lib/storage";
+import { readVideoUrlField } from "@/lib/storage";
 import { PITCH_CATEGORY } from "@/lib/battle-format";
 import { validateCtaLink } from "@/lib/cta-link";
-
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // same limit as the profile showcase video
-
-function validateVideoFile(formData: FormData): { file: File } | { error: string } {
-  const file = formData.get("video");
-  if (!(file instanceof File) || file.size === 0) {
-    return { error: "Bitte ein Video auswählen." };
-  }
-  if (file.size > MAX_VIDEO_BYTES) {
-    return { error: "Video darf maximal 50 MB groß sein." };
-  }
-  if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
-    return { error: "Erlaubt: MP4, WEBM oder MOV." };
-  }
-  return { file };
-}
 
 export type UploadBattleVideoFormState = { error?: string } | undefined;
 
@@ -35,6 +19,10 @@ export type UploadBattleVideoFormState = { error?: string } | undefined;
  * Scheduled-mode: one of the two brands in an 'awaiting_videos' battle
  * uploads their side. Once both sides are in, activateBattleIfBothSidesReady
  * opens voting and fires the follower notification.
+ *
+ * Phase 29: the video itself was already uploaded client-side directly to
+ * storage by the time this runs (see video-picker-input.tsx) — this only
+ * ever receives the resulting URL, never the file.
  */
 export async function uploadBattleVideo(
   _prevState: UploadBattleVideoFormState,
@@ -68,9 +56,9 @@ export async function uploadBattleVideo(
     return { error: "Die Frist für diesen Pitch ist abgelaufen." };
   }
 
-  const validated = validateVideoFile(formData);
-  if ("error" in validated) {
-    return { error: validated.error };
+  const video = readVideoUrlField(formData, "battle-videos");
+  if ("error" in video) {
+    return { error: video.error };
   }
 
   const cta = validateCtaLink(formData);
@@ -78,15 +66,14 @@ export async function uploadBattleVideo(
     return { error: Object.values(cta.errors)[0]![0] };
   }
 
-  const uploaded = await uploadVideo(validated.file, "battle-videos");
   const now = new Date();
 
   await db
     .update(battles)
     .set(
       isA
-        ? { brandAVideoUrl: uploaded.url, brandASubmittedAt: now, brandACtaLabel: cta.ctaLabel, brandACtaUrl: cta.ctaUrl }
-        : { brandBVideoUrl: uploaded.url, brandBSubmittedAt: now, brandBCtaLabel: cta.ctaLabel, brandBCtaUrl: cta.ctaUrl },
+        ? { brandAVideoUrl: video.videoUrl, brandASubmittedAt: now, brandACtaLabel: cta.ctaLabel, brandACtaUrl: cta.ctaUrl }
+        : { brandBVideoUrl: video.videoUrl, brandBSubmittedAt: now, brandBCtaLabel: cta.ctaLabel, brandBCtaUrl: cta.ctaUrl },
     )
     .where(eq(battles.id, battleId));
 
@@ -129,9 +116,9 @@ export async function counterWithVideo(_prevState: CounterFormState, formData: F
     return { error: "Du hast auf diese Marke bereits geantwortet." };
   }
 
-  const validated = validateVideoFile(formData);
-  if ("error" in validated) {
-    return { error: validated.error };
+  const video = readVideoUrlField(formData, "battle-videos");
+  if ("error" in video) {
+    return { error: video.error };
   }
 
   const cta = validateCtaLink(formData);
@@ -139,7 +126,6 @@ export async function counterWithVideo(_prevState: CounterFormState, formData: F
     return { error: Object.values(cta.errors)[0]![0] };
   }
 
-  const uploaded = await uploadVideo(validated.file, "battle-videos");
   const now = new Date();
 
   const [battle] = await db
@@ -155,7 +141,7 @@ export async function counterWithVideo(_prevState: CounterFormState, formData: F
       // display layer falls back to the brand's own `website` instead.
       brandAVideoUrl: targetBrand.videoUrl,
       brandASubmittedAt: targetBrand.videoUploadedAt ?? now,
-      brandBVideoUrl: uploaded.url,
+      brandBVideoUrl: video.videoUrl,
       brandBSubmittedAt: now,
       brandBCtaLabel: cta.ctaLabel,
       brandBCtaUrl: cta.ctaUrl,

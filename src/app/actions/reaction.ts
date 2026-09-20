@@ -8,12 +8,10 @@ import { reactions, soloPitches } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { promoteReactionToBattle } from "@/lib/reaction";
-import { uploadVideo, ALLOWED_VIDEO_TYPES } from "@/lib/storage";
+import { readVideoUrlField } from "@/lib/storage";
 import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
 
 export type ReactionFormState = { error?: string } | undefined;
-
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
 /**
  * Phase 13: any brand reacts to a solo pitch, no permission needed — never
@@ -54,19 +52,12 @@ export async function postReaction(_prevState: ReactionFormState, formData: Form
     return { error: RATE_LIMIT_MESSAGE };
   }
 
-  const file = formData.get("video");
-  if (!(file instanceof File) || file.size === 0) {
-    return { error: "Bitte ein Video auswählen." };
-  }
-  if (file.size > MAX_VIDEO_BYTES) {
-    return { error: "Video darf maximal 50 MB groß sein." };
-  }
-  if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
-    return { error: "Erlaubt: MP4, WEBM oder MOV." };
+  const video = readVideoUrlField(formData, "reaction-videos");
+  if ("error" in video) {
+    return { error: video.error };
   }
 
-  const uploaded = await uploadVideo(file, "reaction-videos");
-  await db.insert(reactions).values({ soloPitchId, brandId: myBrand.id, videoUrl: uploaded.url });
+  await db.insert(reactions).values({ soloPitchId, brandId: myBrand.id, videoUrl: video.videoUrl });
 
   refresh();
   return undefined;

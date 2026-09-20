@@ -5,13 +5,11 @@ import { db } from "@/db";
 import { soloPitches } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
-import { uploadVideo, ALLOWED_VIDEO_TYPES } from "@/lib/storage";
+import { readVideoUrlField } from "@/lib/storage";
 import { PITCH_CATEGORY } from "@/lib/battle-format";
 import { validateCtaLink } from "@/lib/cta-link";
 
 export type SoloPitchFormState = { errors?: Record<string, string[]>; success?: boolean } | undefined;
-
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
 /**
  * Phase 13: post a new solo pitch — a normal, opponent-free feed post. This
@@ -19,6 +17,10 @@ const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
  * Duell to exist at all" problem (see CLAUDE-CODE-UEBERGABE.md §6): every
  * video starts here, a Duell is something that can happen to it later
  * (challenge or promoted reaction), never a precondition for posting.
+ *
+ * Phase 29: the video itself was already uploaded client-side directly to
+ * storage by the time this runs (see video-picker-input.tsx) — this only
+ * ever receives the resulting URL, never the file.
  */
 export async function postSoloPitch(_prevState: SoloPitchFormState, formData: FormData): Promise<SoloPitchFormState> {
   const user = await requireUser();
@@ -27,15 +29,9 @@ export async function postSoloPitch(_prevState: SoloPitchFormState, formData: Fo
     return { errors: { _form: ["Du musst zuerst eine Marke erstellen."] } };
   }
 
-  const file = formData.get("video");
-  if (!(file instanceof File) || file.size === 0) {
-    return { errors: { video: ["Bitte ein Video auswählen."] } };
-  }
-  if (file.size > MAX_VIDEO_BYTES) {
-    return { errors: { video: ["Video darf maximal 50 MB groß sein."] } };
-  }
-  if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
-    return { errors: { video: ["Erlaubt: MP4, WEBM oder MOV."] } };
+  const video = readVideoUrlField(formData, "solo-pitch-videos");
+  if ("error" in video) {
+    return { errors: { video: [video.error] } };
   }
 
   const cta = validateCtaLink(formData);
@@ -43,11 +39,9 @@ export async function postSoloPitch(_prevState: SoloPitchFormState, formData: Fo
     return { errors: cta.errors };
   }
 
-  const uploaded = await uploadVideo(file, "solo-pitch-videos");
-
   await db.insert(soloPitches).values({
     brandId: myBrand.id,
-    videoUrl: uploaded.url,
+    videoUrl: video.videoUrl,
     category: PITCH_CATEGORY,
     ctaLabel: cta.ctaLabel,
     ctaUrl: cta.ctaUrl,

@@ -11,17 +11,21 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/admin/migrate": ["./drizzle/**/*"],
   },
-  // Every video upload (Solo-Pitch, Duell-Video, Kontern, Reaktion, Casting-/
-  // Creator-Einreichung) submits its File through a Server Action, and
-  // Next's default Server Action body limit is 1MB — far under the app's
-  // own 50MB video-size checks (MAX_VIDEO_BYTES in the relevant actions).
-  // Without this, every real (non-trivially-small) video upload fails
-  // before the action code ever runs — found 2026-09-19 when a real device
-  // upload silently failed with a generic browser error, not one of this
-  // app's own validation messages.
+  // Raises Next's own default Server Action body limit from 1MB — found
+  // 2026-09-19 when a real device upload silently failed with a generic
+  // browser error, not one of this app's own validation messages. Note
+  // this alone does NOT fix video uploads: Vercel's Serverless Functions
+  // additionally cap any request body at 4.5MB, hard, not configurable
+  // here or anywhere else — that's *why* video uploads (Solo-Pitch, Duell-
+  // Video, Kontern, Reaktion, Casting-/Creator-Einreichung) go straight
+  // from the browser to storage now instead (see storage.ts's
+  // createVideoUploadTarget). This setting still matters for the smaller
+  // payloads that DO still cross a Server Action — e.g. a brand logo image
+  // (capped at 2MB in actions/brand.ts, comfortably under Vercel's 4.5MB
+  // ceiling but over Next's old 1MB default).
   experimental: {
     serverActions: {
-      bodySizeLimit: "60mb",
+      bodySizeLimit: "4mb",
     },
   },
 };
