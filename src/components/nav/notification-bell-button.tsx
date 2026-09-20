@@ -16,8 +16,11 @@ export function NotificationBellButton({ isLoggedIn, unreadCount = 0 }: { isLogg
     <Link
       href="/notifications"
       aria-label="Erinnerungen"
-      className="fixed left-4 z-30 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md"
-      style={{ top: "calc(env(safe-area-inset-top) + 12px)" }}
+      className="fixed z-30 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md"
+      // Phase 30: same reasoning as bottom-nav.tsx — aligns with the feed's
+      // centered 480px-max column on wide viewports (max(...) falls back to
+      // the plain 16px corner offset on any real phone).
+      style={{ top: "calc(env(safe-area-inset-top) + 12px)", left: "max(16px, calc(50% - 224px))" }}
     >
       <Bell size={20} strokeWidth={1.75} />
       {unreadCount > 0 && (

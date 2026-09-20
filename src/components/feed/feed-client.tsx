@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { FeedDuel, FeedItem, FeedPage, FeedSoloPitch } from "@/lib/feed";
 import { FeedDuelCard } from "@/components/feed/feed-duel-card";
 import { FeedSoloPitchCard } from "@/components/feed/feed-solo-pitch-card";
@@ -10,12 +11,21 @@ import { getNotificationPermission, subscribeToPush } from "@/lib/push-client";
 
 type Tab = "foryou" | "following";
 
+// Phase 30: Luca's report — leaving the feed for /profile and coming back
+// scrolled all the way back to the top, forcing a full re-scroll every
+// time. The feed lives at the app's root route with no persistent layout
+// keeping it mounted across navigations (see CLAUDE-CODE-UEBERGABE.md), so
+// this remembers the scroll offset in sessionStorage (survives navigation,
+// cleared when the tab closes) and restores it on mount instead.
+const SCROLL_STORAGE_KEY = "markitch:feed:scrollTop";
+
 export function FeedClient({
   initialItems,
   initialTotal,
   isLoggedIn,
   viewerBrandId,
   focusBattleId,
+  resetScroll,
 }: {
   initialItems: FeedItem[];
   initialTotal: number;
@@ -23,7 +33,10 @@ export function FeedClient({
   /** Viewer's own brand id, if they have one — gates "Pitch schicken"/"Hochstufen" without a per-card query. */
   viewerBrandId?: string | null;
   focusBattleId?: string | null;
+  /** Phase 30: true right after posting — land on the fresh post at the top instead of restoring an old scroll offset. */
+  resetScroll?: boolean;
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("foryou");
   const [items, setItems] = useState<FeedItem[]>(initialItems);
   const [total, setTotal] = useState(initialTotal);
@@ -34,6 +47,49 @@ export function FeedClient({
   const [reactionsSoloPitchId, setReactionsSoloPitchId] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (resetScroll) {
+      try {
+        sessionStorage.removeItem(SCROLL_STORAGE_KEY);
+      } catch {
+        /* ignore */
+      }
+      router.replace("/", { scroll: false });
+      return;
+    }
+    if (focusBattleId) return; // deep-link scroll-into-view below takes priority
+    try {
+      const saved = sessionStorage.getItem(SCROLL_STORAGE_KEY);
+      if (saved) el.scrollTop = Number(saved);
+    } catch {
+      /* ignore */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally once, on mount
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let queued = false;
+    function onScroll() {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        try {
+          sessionStorage.setItem(SCROLL_STORAGE_KEY, String(el!.scrollTop));
+        } catch {
+          /* ignore */
+        }
+        queued = false;
+      });
+    }
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
 
   const loadTab = useCallback(async (nextTab: Tab) => {
     setLoading(true);
@@ -240,7 +296,12 @@ export function FeedClient({
   const showEmptyFollowing = tab === "following" && !loading && items.length === 0;
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-black">
+    // Phase 30: capped to a phone-shaped column and centered — Luca's report
+    // that a video looks "extrem in die Breite gezogen" on a laptop: a 9:16
+    // video with object-cover inside a full-viewport-width box gets
+    // aggressively cropped on a wide, short window. Below this width
+    // (any real phone) it's a no-op, full bleed as before.
+    <div className="relative mx-auto h-dvh w-full max-w-[480px] overflow-hidden bg-black md:border-x md:border-zinc-900">
       {/* Tabs */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center gap-6 pt-[calc(env(safe-area-inset-top)+14px)]">
         {(
@@ -261,7 +322,7 @@ export function FeedClient({
         ))}
       </div>
 
-      <div className="h-full w-full snap-y snap-mandatory overflow-y-scroll">
+      <div ref={scrollRef} className="h-full w-full snap-y snap-mandatory overflow-y-scroll">
         {items.map((item) =>
           item.kind === "duel" ? (
             <FeedDuelCard

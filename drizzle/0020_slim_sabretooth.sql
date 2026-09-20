@@ -1,0 +1,1 @@
+ALTER TABLE "solo_pitches" ADD COLUMN "description" text;

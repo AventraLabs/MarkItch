@@ -419,6 +419,11 @@ export const soloPitches = pgTable("solo_pitches", {
     .references(() => brands.id, { onDelete: "cascade" }),
   videoUrl: text("video_url").notNull(),
   category: text("category").notNull(),
+  // Phase 30: a real caption, like every other short-video app — separate
+  // from ctaLabel below (that's a button's text, e.g. "Jetzt bestellen"),
+  // this is what the video is actually about. Nullable: existing posts
+  // predate this field.
+  description: text("description"),
   // Phase 27: Call-to-Action — see the matching comment on battles above.
   ctaLabel: text("cta_label"),
   ctaUrl: text("cta_url"),

@@ -32,7 +32,11 @@ export function BottomNav({ isLoggedIn }: { isLoggedIn: boolean }) {
   const allTabs = [...TABS, searchTab, postTab, profileTab];
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t border-white/10 bg-black/70 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
+    // Phase 30: left-1/2 + -translate-x-1/2 + max-w instead of inset-x-0 —
+    // keeps this aligned with the feed's own centered phone-width column
+    // (feed-client.tsx) on wide/desktop viewports instead of spanning the
+    // full browser window; a no-op on any real phone (viewport < 480px).
+    <nav className="fixed bottom-0 left-1/2 z-20 flex w-full max-w-[480px] -translate-x-1/2 justify-around border-t border-white/10 bg-black/70 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
       {allTabs.map((tab) => {
         const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
         const Icon = tab.icon;

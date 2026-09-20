@@ -9,8 +9,12 @@ import { FeedClient } from "@/components/feed/feed-client";
 // redeploy, and getOptionalUser() already makes this dynamic anyway.
 export const dynamic = "force-dynamic";
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ battle?: string; pitch?: string }> }) {
-  const { battle: focusBattleId, pitch: focusSoloPitchId } = await searchParams;
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ battle?: string; pitch?: string; posted?: string }>;
+}) {
+  const { battle: focusBattleId, pitch: focusSoloPitchId, posted } = await searchParams;
   const user = await getOptionalUser();
   const [firstPage, viewerBrand] = await Promise.all([
     getForYouFeed(user?.id ?? null, 0, 6),
@@ -39,6 +43,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ b
       isLoggedIn={Boolean(user)}
       viewerBrandId={viewerBrand?.id ?? null}
       focusBattleId={focusBattleId ?? focusSoloPitchId ?? null}
+      resetScroll={Boolean(posted)}
     />
   );
 }

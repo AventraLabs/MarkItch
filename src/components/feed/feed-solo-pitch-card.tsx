@@ -105,6 +105,7 @@ export function FeedSoloPitchCard({
             <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-medium text-orange-400">🚀 Boost</span>
           )}
         </div>
+        {pitch.description && <p className="mb-2 line-clamp-2 text-sm text-white/90">{pitch.description}</p>}
         {pitch.ctaUrl && pitch.ctaLabel && (
           <a
             href={pitch.ctaUrl}

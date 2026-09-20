@@ -80,7 +80,12 @@ export async function uploadBattleVideo(
   await activateBattleIfBothSidesReady(battleId);
 
   refresh();
-  return undefined;
+  // Phase 30: redirect instead of just returning — the waiting-room page
+  // (/pitches/[id]) already shows "eingereicht, warte auf Gegenseite" or
+  // bounces straight into the live feed if the other side was already in,
+  // so re-rendering it here is exactly the right next screen and also
+  // makes a second click impossible (this form unmounts).
+  redirect(`/pitches/${battleId}`);
 }
 
 export type CounterFormState = { error?: string } | undefined;

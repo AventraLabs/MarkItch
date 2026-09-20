@@ -141,6 +141,13 @@
       "when": 1789837464666,
       "tag": "0019_violet_shooting_star",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1789915259313,
+      "tag": "0020_slim_sabretooth",
+      "breakpoints": true
     }
   ]
 }

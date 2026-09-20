@@ -9,7 +9,7 @@ import { getBrandForUser } from "@/lib/brand";
 import { getFollowerCount } from "@/lib/follow";
 import { getSoloPitchesForBrand } from "@/lib/solo-pitch";
 import { CreateBrandForm } from "@/components/brand/create-brand-form";
-import { VideoPlayer } from "@/components/brand/video-player";
+import { SoloPitchGrid } from "@/components/profile/solo-pitch-grid";
 
 /**
  * Phase 23: rebuilt to actually look like a profile tab (Instagram/TikTok
@@ -74,13 +74,7 @@ export default async function ProfilePage() {
           </div>
 
           {mySoloPitches.length > 0 ? (
-            <ul className="grid grid-cols-3 gap-1">
-              {mySoloPitches.map((pitch) => (
-                <li key={pitch.id}>
-                  <VideoPlayer src={pitch.videoUrl} />
-                </li>
-              ))}
-            </ul>
+            <SoloPitchGrid initialPitches={mySoloPitches} />
           ) : (
             <div className="rounded-2xl border border-zinc-800 py-12 text-center">
               <p className="mb-2 text-sm text-zinc-500">Noch nichts gepostet.</p>

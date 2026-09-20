@@ -249,6 +249,8 @@ export type FeedSoloPitch = {
   brandSlug: string;
   brandLogoUrl: string | null;
   videoUrl: string;
+  /** Phase 30: null only for content posted before this existed. */
+  description: string | null;
   likeCount: number;
   viewerLiked: boolean;
   viewerOwnsThisBrand: boolean;
@@ -291,6 +293,7 @@ async function buildFeedSoloPitches(viewerId: string | null): Promise<FeedSoloPi
     brandSlug: pitch.brand.slug,
     brandLogoUrl: pitch.brand.logoUrl,
     videoUrl: pitch.videoUrl,
+    description: pitch.description,
     likeCount: likeCounts.get(pitch.id) ?? 0,
     viewerLiked: viewerLikedIds.has(pitch.id),
     viewerOwnsThisBrand: viewerBrand?.id === pitch.brand.id,

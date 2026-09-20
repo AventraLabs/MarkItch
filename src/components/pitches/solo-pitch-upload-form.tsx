@@ -2,12 +2,13 @@
 
 import { useActionState, useState, type FormEvent } from "react";
 import { postSoloPitch, type SoloPitchFormState } from "@/app/actions/solo-pitch";
-import { FormError, FormSuccess, SubmitButton } from "@/components/ui";
+import { FormError, SubmitButton } from "@/components/ui";
 import { VideoPickerInput } from "@/components/video-picker-input";
 import { CtaLinkFields } from "@/components/pitches/cta-link-fields";
 
 export function SoloPitchUploadForm() {
   const [state, action] = useActionState<SoloPitchFormState, FormData>(postSoloPitch, undefined);
+  const [description, setDescription] = useState("");
   const [ctaLabel, setCtaLabel] = useState("");
   const [ctaUrl, setCtaUrl] = useState("");
   const [clientError, setClientError] = useState<string | null>(null);
@@ -33,8 +34,11 @@ export function SoloPitchUploadForm() {
 
   return (
     <form action={action} onSubmit={handleSubmit}>
-      <FormError message={clientError ?? state?.errors?._form?.[0] ?? state?.errors?.video?.[0]} />
-      {state?.success && <FormSuccess message="Solo-Pitch gepostet — er läuft jetzt im Feed." />}
+      <FormError
+        message={
+          clientError ?? state?.errors?._form?.[0] ?? state?.errors?.video?.[0] ?? state?.errors?.description?.[0]
+        }
+      />
       <VideoPickerInput
         folder="solo-pitch-videos"
         onUploadStateChange={({ uploading, uploadedUrl }) => {
@@ -42,6 +46,22 @@ export function SoloPitchUploadForm() {
           setVideoUploaded(Boolean(uploadedUrl));
         }}
       />
+      <div className="mb-4">
+        <label htmlFor="description" className="mb-1 block text-sm font-medium text-zinc-300">
+          Beschreibung
+        </label>
+        <textarea
+          id="description"
+          name="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          required
+          maxLength={300}
+          rows={3}
+          placeholder="Worum geht's in diesem Video?"
+          className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white placeholder-zinc-500 outline-none focus:border-orange-500"
+        />
+      </div>
       <CtaLinkFields
         errors={state?.errors}
         ctaLabel={ctaLabel}
