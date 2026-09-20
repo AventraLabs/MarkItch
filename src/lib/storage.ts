@@ -51,6 +51,7 @@ async function uploadToSupabase(key: string, bytes: Buffer, contentType: string)
     method: "POST",
     headers: {
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: SUPABASE_SERVICE_ROLE_KEY!,
       "Content-Type": contentType,
       "x-upsert": "true",
     },
@@ -80,7 +81,12 @@ export async function createVideoUploadTarget(folder: VideoUploadFolder, content
   if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/upload/sign/${SUPABASE_BUCKET}/${key}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
     });
     if (!res.ok) {
       throw new Error(`Supabase signed-upload-URL request failed: ${res.status} ${await res.text()}`);

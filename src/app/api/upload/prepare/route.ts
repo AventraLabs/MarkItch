@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(target);
   } catch (err) {
     console.error("[upload/prepare]", err);
-    return NextResponse.json({ error: "Upload konnte nicht vorbereitet werden." }, { status: 500 });
+    // TODO(debug, remove before merge): surfacing the real error to speed up
+    // diagnosing the Supabase signed-URL call — behind auth already, no secrets in this message.
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Upload konnte nicht vorbereitet werden." }, { status: 500 });
   }
 }
