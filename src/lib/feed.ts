@@ -405,6 +405,18 @@ export async function getFeedSoloPitchById(viewerId: string | null, soloPitchId:
   return items.find((p) => p.soloPitchId === soloPitchId) ?? null;
 }
 
+/**
+ * Phase 32: a brand's own profile grid (own /profile or someone else's
+ * /brands/[slug]) needs the same viewer-relative shape as the main feed —
+ * like/comment/reaction counts, boost state, ownership — not just the raw
+ * DB row, because opening a tile reuses FeedSoloPitchCard itself (Luca:
+ * "muss genau gleich aussehen wie im Feed").
+ */
+export async function getFeedSoloPitchesForBrand(viewerId: string | null, brandId: string): Promise<FeedSoloPitch[]> {
+  const items = await buildFeedSoloPitches(viewerId);
+  return items.filter((p) => p.brandId === brandId);
+}
+
 /** "Folge ich" — Duelle with a followed brand on either side, plus solo pitches from a followed brand, newest first. */
 export async function getFollowingFeed(viewerId: string, offset = 0, limit = 6): Promise<FeedPage> {
   const followedBrandIds = await getFollowedBrandIds(viewerId);

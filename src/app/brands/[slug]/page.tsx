@@ -7,6 +7,8 @@ import { VideoPlayer } from "@/components/brand/video-player";
 import { ChallengeButton } from "@/components/challenge/challenge-button";
 import { FollowButton } from "@/components/brand/follow-button";
 import { CounterForm } from "@/components/battle/counter-form";
+import { BrandProfileHeader } from "@/components/profile/brand-profile-header";
+import { SoloPitchGrid } from "@/components/profile/solo-pitch-grid";
 import { getOptionalUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { getLivePendingChallengeBetween } from "@/lib/challenge";
@@ -14,6 +16,7 @@ import { getFollowerCount, isFollowing } from "@/lib/follow";
 import { getExistingOpenBattle } from "@/lib/battle";
 import { getActiveCastingForBrand, getLatestFinishedCastingForBrand } from "@/lib/casting";
 import { currentPeriod, periodLabel, getChartForBrand } from "@/lib/creator-charts";
+import { getFeedSoloPitchesForBrand } from "@/lib/feed";
 
 // Note: this page already reads the session (getOptionalUser -> auth(),
 // which touches cookies), so Next treats it as dynamic automatically —
@@ -36,7 +39,8 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
   const viewer = await getOptionalUser();
   const viewerBrand = viewer ? await getBrandForUser(viewer.id) : null;
   const isOwnBrand = viewerBrand?.id === brand.id;
-  const [livePending, followerCount, viewerFollows, existingOpenBattle, activeCasting] = await Promise.all([
+  const [soloPitches, livePending, followerCount, viewerFollows, existingOpenBattle, activeCasting] = await Promise.all([
+    getFeedSoloPitchesForBrand(viewer?.id ?? null, brand.id),
     viewerBrand && !isOwnBrand ? getLivePendingChallengeBetween(viewerBrand.id, brand.id) : null,
     getFollowerCount(brand.id),
     viewer && !isOwnBrand ? isFollowing(viewer.id, brand.id) : false,
@@ -58,62 +62,55 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-16">
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-8">
-        <div className="flex items-center gap-4">
-          {brand.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- user-uploaded, arbitrary source
-            <img src={brand.logoUrl} alt={brand.name} className="h-20 w-20 rounded-xl object-cover" />
-          ) : (
-            <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-zinc-800 text-3xl font-bold text-zinc-500">
-              {brand.name.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div>
-            <h1 className="text-2xl font-bold text-white">{brand.name}</h1>
-            <div className="mt-1 flex gap-2 text-xs">
-              <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-medium text-orange-400">
-                {brand.category}
-              </span>
-              <span className="rounded-full bg-zinc-800 px-2 py-0.5 font-medium text-zinc-400">
-                {COUNTRY_LABELS[brand.country] ?? brand.country}
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-zinc-500">{followerCount} Follower</p>
-          </div>
+      {/* Phase 32: identical layout to /profile (Luca: "das Profil bei jedem
+          müsste so aussehen wie der Tab Profil") — this used to be a
+          completely different, lesser page that never even showed this
+          brand's actual posts. */}
+      <BrandProfileHeader
+        name={brand.name}
+        logoUrl={brand.logoUrl}
+        bio={brand.description}
+        postCount={soloPitches.length}
+        followerCount={followerCount}
+        action={viewer && !isOwnBrand ? <FollowButton brandId={brand.id} isFollowing={viewerFollows} /> : undefined}
+      />
+
+      {soloPitches.length > 0 ? (
+        <SoloPitchGrid
+          initialPitches={soloPitches}
+          isLoggedIn={Boolean(viewer)}
+          viewerBrandId={viewerBrand?.id ?? null}
+        />
+      ) : (
+        <div className="rounded-2xl border border-zinc-800 py-12 text-center">
+          <p className="text-sm text-zinc-500">Noch nichts gepostet.</p>
+        </div>
+      )}
+
+      <div className="mt-8 space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
+        <div className="flex gap-2 text-xs">
+          <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-medium text-orange-400">{brand.category}</span>
+          <span className="rounded-full bg-zinc-800 px-2 py-0.5 font-medium text-zinc-400">
+            {COUNTRY_LABELS[brand.country] ?? brand.country}
+          </span>
         </div>
 
-        {viewer && !isOwnBrand && (
-          <div className="mt-4">
-            <FollowButton brandId={brand.id} isFollowing={viewerFollows} />
-          </div>
-        )}
-
-        {brand.description && <p className="mt-6 text-sm leading-relaxed text-zinc-300">{brand.description}</p>}
-
         {brand.website && (
-          <a
-            href={brand.website}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-block text-sm text-orange-500 hover:underline"
-          >
+          <a href={brand.website} target="_blank" rel="noopener noreferrer" className="block text-sm text-orange-500 hover:underline">
             {brand.website} ↗
           </a>
         )}
 
         {brand.videoUrl && (
-          <div className="mx-auto mt-6 max-w-[280px]">
+          <div className="mx-auto max-w-[280px]">
             <VideoPlayer src={brand.videoUrl} />
           </div>
         )}
 
         {brand.videoUrl && viewerBrand && !isOwnBrand && (
-          <div className="mt-4 text-center">
+          <div className="text-center">
             {existingOpenBattle ? (
-              <Link
-                href={`/pitches/${existingOpenBattle.id}`}
-                className="text-sm text-orange-500 hover:underline"
-              >
+              <Link href={`/pitches/${existingOpenBattle.id}`} className="text-sm text-orange-500 hover:underline">
                 Du hast auf diese Marke bereits geantwortet — Pitch ansehen →
               </Link>
             ) : (
@@ -122,7 +119,7 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
           </div>
         )}
 
-        <div className="mt-6 rounded-lg border border-zinc-800 p-4 text-center">
+        <div className="rounded-lg border border-zinc-800 p-4 text-center">
           <p className="mb-2 text-sm text-zinc-300">
             🎥 Creator-Charts — {periodLabel(period)}
             {chartEntries.length > 0 ? ` (${chartEntries.length})` : ""}
@@ -136,7 +133,7 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
         </div>
 
         {activeCasting && (
-          <div className="mt-4 rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 text-center">
+          <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 text-center">
             <p className="mb-2 text-sm text-orange-300">🎬 Partner-Casting läuft (neuer Partner gesucht): „{activeCasting.prompt}“</p>
             <Link href={`/castings/${activeCasting.id}`} className="text-sm font-semibold text-orange-400 hover:underline">
               {isOwnBrand ? "Ansehen" : "Ansehen & mitmachen"} →
@@ -145,7 +142,7 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
         )}
 
         {!activeCasting && castingWinner && latestFinishedCasting && (
-          <div className="mt-6 rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 text-center">
+          <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 text-center">
             <p className="text-sm text-orange-300">
               🏆 Offizieller Partner:{" "}
               <Link href={`/brands/${castingWinner.brandSlug}`} className="font-semibold hover:underline">
@@ -164,7 +161,7 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
         {viewerBrand && !isOwnBrand && (
           <>
             {livePending ? (
-              <p className="mt-6 text-center text-sm text-zinc-400">
+              <p className="text-center text-sm text-zinc-400">
                 {livePending.challengerBrandId === viewerBrand.id
                   ? "Du hast diese Marke bereits eingeladen — Antwort steht noch aus."
                   : "Diese Marke hat dich bereits eingeladen — schau in deinem Profil vorbei."}

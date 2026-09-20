@@ -7,9 +7,10 @@ import { users } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { getFollowerCount } from "@/lib/follow";
-import { getSoloPitchesForBrand } from "@/lib/solo-pitch";
+import { getFeedSoloPitchesForBrand } from "@/lib/feed";
 import { CreateBrandForm } from "@/components/brand/create-brand-form";
 import { SoloPitchGrid } from "@/components/profile/solo-pitch-grid";
+import { BrandProfileHeader } from "@/components/profile/brand-profile-header";
 
 /**
  * Phase 23: rebuilt to actually look like a profile tab (Instagram/TikTok
@@ -33,7 +34,7 @@ export default async function ProfilePage() {
 
   const brand = await getBrandForUser(sessionUser.id);
   const [mySoloPitches, followerCount] = await Promise.all([
-    brand ? getSoloPitchesForBrand(brand.id) : Promise.resolve([]),
+    brand ? getFeedSoloPitchesForBrand(sessionUser.id, brand.id) : Promise.resolve([]),
     brand ? getFollowerCount(brand.id) : Promise.resolve(0),
   ]);
 
@@ -48,33 +49,16 @@ export default async function ProfilePage() {
 
       {brand ? (
         <>
-          <div className="mb-6 flex flex-col items-center text-center">
-            {brand.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- user-uploaded, arbitrary source
-              <img src={brand.logoUrl} alt={brand.name} className="h-24 w-24 rounded-full object-cover" />
-            ) : (
-              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-zinc-800 text-3xl font-bold text-zinc-500">
-                {brand.name.charAt(0).toUpperCase()}
-              </div>
-            )}
-            <h2 className="mt-3 text-xl font-bold text-white">{brand.name}</h2>
-            {brand.description && <p className="mt-1 max-w-xs text-sm text-zinc-400">{brand.description}</p>}
-            <div className="mt-4 flex gap-8 text-sm">
-              <div>
-                <span className="font-bold text-white">{mySoloPitches.length}</span>{" "}
-                <span className="text-zinc-500">{mySoloPitches.length === 1 ? "Post" : "Posts"}</span>
-              </div>
-              <div>
-                <span className="font-bold text-white">{followerCount}</span> <span className="text-zinc-500">Follower</span>
-              </div>
-            </div>
-            <Link href={`/brands/${brand.slug}`} className="mt-4 text-sm text-orange-500 hover:underline">
-              Öffentliches Profil ansehen →
-            </Link>
-          </div>
+          <BrandProfileHeader
+            name={brand.name}
+            logoUrl={brand.logoUrl}
+            bio={brand.description}
+            postCount={mySoloPitches.length}
+            followerCount={followerCount}
+          />
 
           {mySoloPitches.length > 0 ? (
-            <SoloPitchGrid initialPitches={mySoloPitches} />
+            <SoloPitchGrid initialPitches={mySoloPitches} isLoggedIn viewerBrandId={brand.id} />
           ) : (
             <div className="rounded-2xl border border-zinc-800 py-12 text-center">
               <p className="mb-2 text-sm text-zinc-500">Noch nichts gepostet.</p>

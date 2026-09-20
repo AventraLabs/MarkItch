@@ -4,10 +4,12 @@ import { Bell } from "lucide-react";
 /**
  * Phase 28: moved out of the bottom nav (Instagram/TikTok convention —
  * notifications live as a corner icon, not a dedicated tab, freeing up a
- * bottom-nav slot). Fixed top-LEFT, not top-right — the feed's own per-card
- * mute indicator already occupies top-right on every video card (see
- * feed-solo-pitch-card.tsx/feed-duel-card.tsx), so this avoids sitting on
- * top of it.
+ * bottom-nav slot).
+ *
+ * Phase 32: moved from top-left to top-right — Luca removed the permanent
+ * mute indicator that used to sit top-right on every video card (mute is
+ * now only shown contextually, alongside the pause icon, when a video is
+ * actually paused), freeing that corner up for this instead.
  */
 export function NotificationBellButton({ isLoggedIn, unreadCount = 0 }: { isLoggedIn: boolean; unreadCount?: number }) {
   if (!isLoggedIn) return null;
@@ -20,7 +22,7 @@ export function NotificationBellButton({ isLoggedIn, unreadCount = 0 }: { isLogg
       // Phase 30: same reasoning as bottom-nav.tsx — aligns with the feed's
       // centered 480px-max column on wide viewports (max(...) falls back to
       // the plain 16px corner offset on any real phone).
-      style={{ top: "calc(env(safe-area-inset-top) + 12px)", left: "max(16px, calc(50% - 224px))" }}
+      style={{ top: "calc(env(safe-area-inset-top) + 12px)", right: "max(16px, calc(50% - 224px))" }}
     >
       <Bell size={20} strokeWidth={1.75} />
       {unreadCount > 0 && (

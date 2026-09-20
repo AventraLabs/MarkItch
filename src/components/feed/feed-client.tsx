@@ -293,6 +293,10 @@ export function FeedClient({
     patchSolo(soloPitchId, { reactionCount: count });
   }
 
+  function handleSoloPitchDeleted(soloPitchId: string) {
+    setItems((prev) => prev.filter((item) => !(item.kind === "solo" && item.soloPitchId === soloPitchId)));
+  }
+
   const showEmptyFollowing = tab === "following" && !loading && items.length === 0;
 
   return (
@@ -348,6 +352,8 @@ export function FeedClient({
               onOpenComments={(soloPitchId) => setCommentTarget({ kind: "solo", id: soloPitchId })}
               onOpenReactions={setReactionsSoloPitchId}
               onShare={handleShareSolo}
+              onUpdated={(patch) => patchSolo(item.soloPitchId, patch)}
+              onDeleted={() => handleSoloPitchDeleted(item.soloPitchId)}
             />
           ),
         )}

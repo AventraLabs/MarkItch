@@ -277,20 +277,19 @@ export function FeedDuelCard({
       <div className="absolute inset-0" onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} />
 
       {manuallyPaused && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/50 text-3xl text-white">
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-black/50 text-3xl text-white">
             ▶
           </span>
+          <button
+            onClick={onToggleMute}
+            aria-label={muted ? "Ton an" : "Ton aus"}
+            className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-lg text-white"
+          >
+            {muted ? "🔇" : "🔊"}
+          </button>
         </div>
       )}
-
-      <button
-        onClick={onToggleMute}
-        aria-label={muted ? "Ton an" : "Ton aus"}
-        className="absolute right-4 top-4 rounded-full bg-black/40 px-2 py-1 text-xs text-white"
-      >
-        {muted ? "🔇" : "🔊"}
-      </button>
 
       {/* Two-sides indicator + edge chevrons */}
       <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center gap-1.5">
@@ -323,7 +322,7 @@ export function FeedDuelCard({
             href={side.ctaUrl}
             target="_blank"
             rel="noreferrer noopener"
-            className="pointer-events-auto mb-2 inline-flex items-center gap-1.5 rounded-full bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-500"
+            className="pointer-events-auto mb-2 inline-flex items-center gap-1 rounded-full bg-orange-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-orange-500"
           >
             {side.ctaLabel} →
           </a>
