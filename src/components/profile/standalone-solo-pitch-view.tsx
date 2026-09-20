@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FeedSoloPitchCard } from "@/components/feed/feed-solo-pitch-card";
 import { CommentSheet, type CommentTarget } from "@/components/feed/comment-sheet";
-import { ReactionsSheet } from "@/components/pitches/reactions-sheet";
+import { ReactionsFeed } from "@/components/pitches/reactions-feed";
 import type { FeedSoloPitch } from "@/lib/feed";
 
 /**
@@ -91,7 +91,7 @@ export function StandaloneSoloPitchView({
       )}
 
       {reactionsOpen && (
-        <ReactionsSheet
+        <ReactionsFeed
           soloPitchId={pitch.soloPitchId}
           isLoggedIn={isLoggedIn}
           canPostReaction={viewerHasOtherBrand}

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/session";
 import { getReactionsForSoloPitch } from "@/lib/reaction";
 
-/** Reactions to a solo pitch, best-liked first — feeds the ReactionsSheet. */
+/** Reactions to a solo pitch, best-liked first — feeds the ReactionsFeed. */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const soloPitchId = searchParams.get("soloPitchId");
