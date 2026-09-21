@@ -16,6 +16,7 @@ import { VideoPlayer } from "@/components/brand/video-player";
 import { IncomingChallengeList, OutgoingChallengeList } from "@/components/challenge/challenge-list";
 import { getIncomingChallenges, getOutgoingChallenges } from "@/lib/challenge";
 import { getActiveCastingForBrand, getWonCastingsForBrand } from "@/lib/casting";
+import { isAdminEmail } from "@/lib/moderation";
 
 /**
  * Phase 23: everything account-management-shaped that used to live on
@@ -114,6 +115,20 @@ export default async function ProfileSettingsPage() {
           <div>
             <h3 className="mb-2 text-sm font-medium text-zinc-400">Gesendet</h3>
             <OutgoingChallengeList challenges={outgoingChallenges} />
+          </div>
+        </div>
+      )}
+
+      {isAdminEmail(user.email) && (
+        <div className="mb-8 rounded-2xl border border-orange-500/30 bg-orange-500/5 p-6">
+          <h2 className="mb-4 text-lg font-semibold text-white">Admin</h2>
+          <div className="flex flex-col gap-2 text-sm">
+            <Link href="/admin/moderation" className="text-orange-400 hover:underline">
+              Moderation →
+            </Link>
+            <Link href="/admin/boosts" className="text-orange-400 hover:underline">
+              Boosts →
+            </Link>
           </div>
         </div>
       )}
