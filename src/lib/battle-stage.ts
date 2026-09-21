@@ -5,6 +5,7 @@ import { battles, brands, notifications, type NewNotification } from "@/db/schem
 import { getFollowerUserIds } from "@/lib/follow";
 import { getReminderUserIds } from "@/lib/reminder";
 import { VOTING_WINDOW_MS } from "@/lib/battle-format";
+import { sendPushToUser } from "@/lib/push";
 
 export type BattleStage =
   | { stage: "awaiting_videos"; waitingOnBrandIds: string[]; deadline: Date | null }
@@ -125,5 +126,14 @@ async function notifyFollowersOfLiveBattle(battleId: string, brandAId: string, b
 
   if (rows.length > 0) {
     await db.insert(notifications).values(rows);
+    // Phase 36: this was the very first notification type this app ever
+    // had (Phase 5.1) and, until now, none of them — this one included —
+    // ever actually pushed to a phone, only the in-app bell. See
+    // notification.ts's notifyUsers for the same fix applied to the newer
+    // follow/like/comment notifications.
+    const url = `/?battle=${battleId}`;
+    await Promise.all(
+      rows.map((row) => sendPushToUser(row.userId, { title: "MarkItch", body: row.message, url }).catch(() => {})),
+    );
   }
 }

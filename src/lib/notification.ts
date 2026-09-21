@@ -2,6 +2,7 @@ import "server-only";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { brandMembers, brands, notifications, users, type Notification } from "@/db/schema";
+import { sendPushToUser } from "@/lib/push";
 
 const RECENT_LIMIT = 20;
 
@@ -31,6 +32,14 @@ export async function getActorLabel(userId: string): Promise<{ label: string; li
  * they predate `link` and already have their own battleId-based fallback.
  * Silently skips notifying `excludeUserId` (acting on your own content) and
  * de-dupes recipients, since a brand can have more than one member.
+ *
+ * Phase 36: also sends an actual push (not just the in-app bell) to
+ * whichever of a recipient's devices are subscribed — the VAPID
+ * infrastructure (src/lib/push.ts) existed since Phase 12 but nothing ever
+ * called it, so nobody's phone ever actually buzzed for anything, "Duell
+ * live" included. `sendPushToUser` itself already no-ops per-device when
+ * that device never subscribed, and no-ops entirely when VAPID keys aren't
+ * configured — never blocks the in-app notification either way.
  */
 export async function notifyUsers(
   userIds: string[],
@@ -41,6 +50,11 @@ export async function notifyUsers(
   const recipients = [...new Set(userIds)].filter((id) => id !== excludeUserId);
   if (recipients.length === 0) return;
   await db.insert(notifications).values(recipients.map((userId) => ({ userId, message, link })));
+  await Promise.all(
+    recipients.map((userId) =>
+      sendPushToUser(userId, { title: "MarkItch", body: message, url: link ?? "/" }).catch(() => {}),
+    ),
+  );
 }
 
 /** Most recent notifications for this user, newest first. */
