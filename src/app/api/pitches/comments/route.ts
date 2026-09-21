@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { soloPitches, comments } from "@/db/schema";
 import { getOptionalUser } from "@/lib/session";
 import { getCommentsForSoloPitch } from "@/lib/comment";
+import { getActorLabel, notifyUsers } from "@/lib/notification";
+import { getBrandMemberUserIds } from "@/lib/brand";
 
 const MAX_COMMENT_LENGTH = 500;
 
@@ -40,12 +42,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const [pitch] = await db.select({ id: soloPitches.id }).from(soloPitches).where(eq(soloPitches.id, soloPitchId)).limit(1);
+  const [pitch] = await db.select({ id: soloPitches.id, brandId: soloPitches.brandId }).from(soloPitches).where(eq(soloPitches.id, soloPitchId)).limit(1);
   if (!pitch) {
     return NextResponse.json({ error: "Dieser Pitch existiert nicht." }, { status: 404 });
   }
 
   await db.insert(comments).values({ soloPitchId, userId: viewer.id, content });
+  const [memberIds, actor] = await Promise.all([getBrandMemberUserIds(pitch.brandId), getActorLabel(viewer.id)]);
+  await notifyUsers(memberIds, `${actor.label} hat deinen Pitch kommentiert.`, `/?pitch=${soloPitchId}`, viewer.id);
   const list = await getCommentsForSoloPitch(soloPitchId);
   return NextResponse.json({ comments: list });
 }

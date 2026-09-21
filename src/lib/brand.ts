@@ -13,3 +13,9 @@ export async function getBrandForUser(userId: string) {
     .limit(1);
   return row?.brand ?? null;
 }
+
+/** Every user belonging to a brand (almost always exactly one) — who to notify about that brand's content. */
+export async function getBrandMemberUserIds(brandId: string): Promise<string[]> {
+  const rows = await db.select({ userId: brandMembers.userId }).from(brandMembers).where(eq(brandMembers.brandId, brandId));
+  return rows.map((r) => r.userId);
+}

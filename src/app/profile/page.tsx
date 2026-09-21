@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
-import { getFollowerCount } from "@/lib/follow";
+import { getFollowerCount, getFollowingCountForBrand } from "@/lib/follow";
 import { getFeedSoloPitchesForBrand } from "@/lib/feed";
 import { CreateBrandForm } from "@/components/brand/create-brand-form";
 import { SoloPitchGrid } from "@/components/profile/solo-pitch-grid";
@@ -33,9 +33,10 @@ export default async function ProfilePage() {
   }
 
   const brand = await getBrandForUser(sessionUser.id);
-  const [mySoloPitches, followerCount] = await Promise.all([
+  const [mySoloPitches, followerCount, followingCount] = await Promise.all([
     brand ? getFeedSoloPitchesForBrand(sessionUser.id, brand.id) : Promise.resolve([]),
     brand ? getFollowerCount(brand.id) : Promise.resolve(0),
+    brand ? getFollowingCountForBrand(brand.id) : Promise.resolve(0),
   ]);
 
   return (
@@ -55,6 +56,9 @@ export default async function ProfilePage() {
             bio={brand.description}
             postCount={mySoloPitches.length}
             followerCount={followerCount}
+            followingCount={followingCount}
+            followersHref={`/brands/${brand.slug}/followers`}
+            followingHref={`/brands/${brand.slug}/following`}
           />
 
           {mySoloPitches.length > 0 ? (

@@ -111,6 +111,24 @@ export function FeedClient({
     loadTab(nextTab);
   }
 
+  // Phase 35: "Feed" tab tapped again while already on the feed —
+  // bottom-nav.tsx dispatches this since a same-route Link click is
+  // otherwise a no-op. Jump to the newest videos, same as every other
+  // short-video app's own tab.
+  useEffect(() => {
+    function onFeedTabClicked() {
+      scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      try {
+        sessionStorage.removeItem(SCROLL_STORAGE_KEY);
+      } catch {
+        /* ignore */
+      }
+      loadTab(tab);
+    }
+    window.addEventListener("markitch:feed-tab-clicked", onFeedTabClicked);
+    return () => window.removeEventListener("markitch:feed-tab-clicked", onFeedTabClicked);
+  }, [tab, loadTab]);
+
   const loadMore = useCallback(async () => {
     if (loadingRef.current || items.length >= total) return;
     loadingRef.current = true;

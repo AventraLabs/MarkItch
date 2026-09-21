@@ -12,7 +12,7 @@ import { SoloPitchGrid } from "@/components/profile/solo-pitch-grid";
 import { getOptionalUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { getLivePendingChallengeBetween } from "@/lib/challenge";
-import { getFollowerCount, isFollowing } from "@/lib/follow";
+import { getFollowerCount, getFollowingCountForBrand, isFollowing } from "@/lib/follow";
 import { getExistingOpenBattle } from "@/lib/battle";
 import { getActiveCastingForBrand, getLatestFinishedCastingForBrand } from "@/lib/casting";
 import { currentPeriod, periodLabel, getChartForBrand } from "@/lib/creator-charts";
@@ -39,14 +39,16 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
   const viewer = await getOptionalUser();
   const viewerBrand = viewer ? await getBrandForUser(viewer.id) : null;
   const isOwnBrand = viewerBrand?.id === brand.id;
-  const [soloPitches, livePending, followerCount, viewerFollows, existingOpenBattle, activeCasting] = await Promise.all([
-    getFeedSoloPitchesForBrand(viewer?.id ?? null, brand.id),
-    viewerBrand && !isOwnBrand ? getLivePendingChallengeBetween(viewerBrand.id, brand.id) : null,
-    getFollowerCount(brand.id),
-    viewer && !isOwnBrand ? isFollowing(viewer.id, brand.id) : false,
-    viewerBrand && !isOwnBrand ? getExistingOpenBattle(brand.id, viewerBrand.id) : null,
-    getActiveCastingForBrand(brand.id),
-  ]);
+  const [soloPitches, livePending, followerCount, followingCount, viewerFollows, existingOpenBattle, activeCasting] =
+    await Promise.all([
+      getFeedSoloPitchesForBrand(viewer?.id ?? null, brand.id),
+      viewerBrand && !isOwnBrand ? getLivePendingChallengeBetween(viewerBrand.id, brand.id) : null,
+      getFollowerCount(brand.id),
+      getFollowingCountForBrand(brand.id),
+      viewer && !isOwnBrand ? isFollowing(viewer.id, brand.id) : false,
+      viewerBrand && !isOwnBrand ? getExistingOpenBattle(brand.id, viewerBrand.id) : null,
+      getActiveCastingForBrand(brand.id),
+    ]);
   // Only bother looking up a finished casting's result if there's no
   // active one to show instead — a brand always has at most one relevant
   // casting to display at a time.
@@ -72,6 +74,9 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
         bio={brand.description}
         postCount={soloPitches.length}
         followerCount={followerCount}
+        followingCount={followingCount}
+        followersHref={`/brands/${brand.slug}/followers`}
+        followingHref={`/brands/${brand.slug}/following`}
         action={viewer && !isOwnBrand ? <FollowButton brandId={brand.id} isFollowing={viewerFollows} /> : undefined}
       />
 
@@ -102,8 +107,15 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
         )}
 
         {brand.videoUrl && (
-          <div className="mx-auto max-w-[280px]">
-            <VideoPlayer src={brand.videoUrl} />
+          <div>
+            {/* Phase 35: labeled — Luca's report of an empty "Noch nichts
+                gepostet" grid with an unexplained huge video right under it
+                ("Stitchlab") was this legacy single-video field (predates
+                solo pitches, Phase 13) rendering with no context at all. */}
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Vorstellungsvideo</p>
+            <div className="mx-auto max-w-[280px]">
+              <VideoPlayer src={brand.videoUrl} />
+            </div>
           </div>
         )}
 

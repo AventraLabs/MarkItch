@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { battles, comments } from "@/db/schema";
 import { getOptionalUser } from "@/lib/session";
 import { getCommentsForBattle } from "@/lib/comment";
+import { getActorLabel, notifyUsers } from "@/lib/notification";
+import { getBrandMemberUserIds } from "@/lib/brand";
 
 const MAX_COMMENT_LENGTH = 500;
 
@@ -40,12 +42,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const [battle] = await db.select({ id: battles.id }).from(battles).where(eq(battles.id, battleId)).limit(1);
+  const [battle] = await db
+    .select({ id: battles.id, brandAId: battles.brandAId, brandBId: battles.brandBId })
+    .from(battles)
+    .where(eq(battles.id, battleId))
+    .limit(1);
   if (!battle) {
     return NextResponse.json({ error: "Dieser Pitch existiert nicht." }, { status: 404 });
   }
 
   await db.insert(comments).values({ battleId, userId: viewer.id, content });
+  const [memberIdsA, memberIdsB, actor] = await Promise.all([
+    getBrandMemberUserIds(battle.brandAId),
+    getBrandMemberUserIds(battle.brandBId),
+    getActorLabel(viewer.id),
+  ]);
+  await notifyUsers([...memberIdsA, ...memberIdsB], `${actor.label} hat dein Duell kommentiert.`, `/?battle=${battleId}`, viewer.id);
   const list = await getCommentsForBattle(battleId);
   return NextResponse.json({ comments: list });
 }

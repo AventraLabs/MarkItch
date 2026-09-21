@@ -5,6 +5,8 @@ import { battles } from "@/db/schema";
 import { getOptionalUser } from "@/lib/session";
 import { getLikeCount, toggleLikeForUser } from "@/lib/like";
 import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
+import { getActorLabel, notifyUsers } from "@/lib/notification";
+import { getBrandMemberUserIds } from "@/lib/brand";
 
 export async function POST(request: NextRequest) {
   const viewer = await getOptionalUser();
@@ -31,5 +33,9 @@ export async function POST(request: NextRequest) {
 
   const { liked } = await toggleLikeForUser(viewer.id, battleId, brandId);
   const count = await getLikeCount(battleId, brandId);
+  if (liked) {
+    const [memberIds, actor] = await Promise.all([getBrandMemberUserIds(brandId), getActorLabel(viewer.id)]);
+    await notifyUsers(memberIds, `${actor.label} gefällt deine Duell-Seite.`, `/?battle=${battleId}`, viewer.id);
+  }
   return NextResponse.json({ liked, count });
 }

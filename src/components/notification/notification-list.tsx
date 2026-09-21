@@ -48,14 +48,14 @@ export function NotificationList({ notifications }: { notifications: Notificatio
               <p className="mt-1 text-xs text-zinc-500">{timeAgo(n.createdAt)}</p>
             </div>
           );
+          // Phase 35: `link` covers every new notification type (follow/
+          // like/comment); `battleId` is the older "Pitch live" fallback
+          // for notifications that predate `link`.
+          const href = n.link ?? (n.battleId ? `/?battle=${n.battleId}` : null);
           return (
             <li key={n.id}>
-              {n.battleId ? (
-                // Every notification that carries a battleId is created the
-                // moment that battle goes live (see
-                // activateBattleIfBothSidesReady) — so it's always safe to
-                // deep-link straight into the Feed, never the old detail page.
-                <Link href={`/?battle=${n.battleId}`} className="block hover:opacity-80">
+              {href ? (
+                <Link href={href} className="block hover:opacity-80">
                   {content}
                 </Link>
               ) : (

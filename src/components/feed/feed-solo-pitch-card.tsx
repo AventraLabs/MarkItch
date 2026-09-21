@@ -50,6 +50,8 @@ export function FeedSoloPitchCard({
   // toggling mute — mute moved into this same pause overlay as a smaller,
   // secondary button, replacing the old always-visible top-right icon.
   const [manuallyPaused, setManuallyPaused] = useState(false);
+  const [showLikePop, setShowLikePop] = useState(false);
+  const lastTapAt = useRef(0);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -85,6 +87,30 @@ export function FeedSoloPitchCard({
     setTimeout(() => setShareLabel(null), 1800);
   }
 
+  // Phase 35: double-tap to like, single tap to pause/resume — both
+  // standard, both need to work off the exact same tap (Luca: "muss du
+  // schaffen"). Every tap toggles pause immediately (zero added latency,
+  // same as before); if a second tap lands inside the double-tap window,
+  // that's a *second* toggle (netting back to the pre-tap play state) plus
+  // a like — never an unlike, matching Instagram's own double-tap.
+  const DOUBLE_TAP_MS = 300;
+  function handleTap() {
+    setManuallyPaused((p) => !p);
+    const now = Date.now();
+    if (now - lastTapAt.current < DOUBLE_TAP_MS) {
+      lastTapAt.current = 0;
+      if (!isLoggedIn) {
+        window.location.href = "/login";
+        return;
+      }
+      if (!pitch.viewerLiked) onToggleLike(pitch);
+      setShowLikePop(true);
+      setTimeout(() => setShowLikePop(false), 700);
+    } else {
+      lastTapAt.current = now;
+    }
+  }
+
   return (
     <div
       ref={containerRef}
@@ -100,7 +126,13 @@ export function FeedSoloPitchCard({
         playsInline
         preload="metadata"
       />
-      <div className="absolute inset-0" onClick={() => setManuallyPaused((p) => !p)} />
+      <div className="absolute inset-0" onClick={handleTap} />
+
+      {showLikePop && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <Heart size={96} className="fill-white text-white drop-shadow-lg" style={{ animation: "like-pop 0.7s ease-out" }} />
+        </div>
+      )}
 
       {manuallyPaused && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3">
@@ -127,8 +159,8 @@ export function FeedSoloPitchCard({
         </button>
       )}
 
-      <div className="pointer-events-auto absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 pb-24 pr-20">
-        <div className="mb-2 flex items-center gap-2">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 pb-24 pr-20">
+        <div className="pointer-events-auto mb-2 flex items-center gap-2">
           <Link href={`/brands/${pitch.brandSlug}`} className="text-sm font-bold text-white hover:underline">
             {pitch.brandName}
           </Link>
@@ -148,36 +180,42 @@ export function FeedSoloPitchCard({
             href={pitch.ctaUrl}
             target="_blank"
             rel="noreferrer noopener"
-            className="mb-2 inline-flex items-center gap-1 rounded-full bg-orange-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-orange-500"
+            className="pointer-events-auto mb-2 inline-flex items-center gap-1 rounded-full bg-orange-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-orange-500"
           >
             {pitch.ctaLabel} →
           </a>
         )}
-        {viewerHasOtherBrand && <PitchChallengeButton soloPitchId={pitch.soloPitchId} />}
-        {pitch.viewerOwnsThisBrand && <BoostButton soloPitchId={pitch.soloPitchId} />}
+        <div className="pointer-events-auto inline-block">
+          {viewerHasOtherBrand && <PitchChallengeButton soloPitchId={pitch.soloPitchId} />}
+          {pitch.viewerOwnsThisBrand && <BoostButton soloPitchId={pitch.soloPitchId} />}
+        </div>
       </div>
 
-      <div className="pointer-events-auto absolute bottom-40 right-3 flex flex-col items-center gap-5">
+      {/* Right action rail — pointer-events-none on the wrapper, auto only
+          on each button, so a swipe/tap near this edge (or a double-tap
+          slightly off-center) still reaches the gesture layer instead of
+          being swallowed by empty space between icons. */}
+      <div className="pointer-events-none absolute bottom-40 right-3 flex flex-col items-center gap-5">
         <button
           onClick={() => (isLoggedIn ? onToggleLike(pitch) : (window.location.href = "/login"))}
-          className="flex flex-col items-center gap-1 text-white"
+          className="pointer-events-auto flex flex-col items-center gap-1 text-white"
           aria-label="Like"
         >
           <Heart size={30} className={pitch.viewerLiked ? "fill-red-500 text-red-500" : ""} />
           <span className="text-xs font-medium">{pitch.likeCount}</span>
         </button>
 
-        <button onClick={() => onOpenComments(pitch.soloPitchId)} className="flex flex-col items-center gap-1 text-white">
+        <button onClick={() => onOpenComments(pitch.soloPitchId)} className="pointer-events-auto flex flex-col items-center gap-1 text-white">
           <MessageCircle size={28} />
           <span className="text-xs font-medium">{pitch.commentCount}</span>
         </button>
 
-        <button onClick={() => onOpenReactions(pitch.soloPitchId)} className="flex flex-col items-center gap-1 text-white">
+        <button onClick={() => onOpenReactions(pitch.soloPitchId)} className="pointer-events-auto flex flex-col items-center gap-1 text-white">
           <Repeat2 size={28} />
           <span className="text-xs font-medium">{pitch.reactionCount}</span>
         </button>
 
-        <button onClick={handleShare} className="flex flex-col items-center gap-1 text-white">
+        <button onClick={handleShare} className="pointer-events-auto flex flex-col items-center gap-1 text-white">
           <Share2 size={26} />
           <span className="text-xs font-medium">{shareLabel ? "Kopiert" : "Teilen"}</span>
         </button>

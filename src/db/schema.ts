@@ -257,6 +257,13 @@ export const notifications = pgTable("notifications", {
     .references(() => users.id, { onDelete: "cascade" }),
   message: text("message").notNull(),
   battleId: uuid("battle_id").references(() => battles.id, { onDelete: "cascade" }),
+  // Phase 35: a plain relative URL (e.g. "/?pitch=<id>", "/brands/<slug>") —
+  // added so follow/like/comment notifications (which aren't always about a
+  // battle) can still deep-link somewhere. `battleId` stays for the older
+  // "Pitch live" notifications and their existing fallback link derivation
+  // in notification-list.tsx; new notification types just set `link`
+  // directly instead of adding yet another nullable target-id column.
+  link: text("link"),
   readAt: timestamp("read_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

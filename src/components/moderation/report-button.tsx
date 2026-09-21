@@ -62,7 +62,7 @@ export function ReportButton({
   return (
     <>
       {variant === "icon" ? (
-        <button onClick={openSheet} className="flex flex-col items-center gap-1 text-white" aria-label="Melden">
+        <button onClick={openSheet} className="pointer-events-auto flex flex-col items-center gap-1 text-white" aria-label="Melden">
           <Flag size={28} />
           <span className="text-xs font-medium">Melden</span>
         </button>

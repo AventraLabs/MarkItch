@@ -72,7 +72,7 @@ export function SoloPitchOwnerMenuButton({
 
   return (
     <>
-      <button onClick={openMenu} aria-label="Mehr" className="flex flex-col items-center gap-1 text-white">
+      <button onClick={openMenu} aria-label="Mehr" className="pointer-events-auto flex flex-col items-center gap-1 text-white">
         <MoreVertical size={28} />
       </button>
 

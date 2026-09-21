@@ -58,6 +58,15 @@ export function BottomNav({ isLoggedIn }: { isLoggedIn: boolean }) {
           <Link
             key={tab.label}
             href={tab.href}
+            // Phase 35: tapping "Feed" while already on the feed is a no-op
+            // Link click by default (same route) — Luca wants that to
+            // behave like every other short-video app's own tab: jump back
+            // to the newest videos. feed-client.tsx listens for this event.
+            onClick={() => {
+              if (tab.href === "/" && pathname === "/") {
+                window.dispatchEvent(new Event("markitch:feed-tab-clicked"));
+              }
+            }}
             className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${
               active ? "text-orange-500" : "text-zinc-400"
             }`}

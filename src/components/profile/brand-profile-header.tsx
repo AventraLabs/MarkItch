@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 /**
  * Phase 32: shared by /profile (your own) and /brands/[slug] (anyone
@@ -7,6 +8,9 @@ import type { ReactNode } from "react";
  * ("das öffentliche Profil ist falsch, sollte der aktuelle Profil sein").
  * One layout, parameterized by whatever action belongs in each context
  * (a settings gear for your own, a Follow button for anyone else's).
+ *
+ * Phase 35: Follower/Following counts are real links now — Luca: "ich habe
+ * einen Follower aber kann nicht sehen wer... das gilt für alle Profile."
  */
 export function BrandProfileHeader({
   name,
@@ -14,6 +18,9 @@ export function BrandProfileHeader({
   bio,
   postCount,
   followerCount,
+  followingCount,
+  followersHref,
+  followingHref,
   action,
 }: {
   name: string;
@@ -21,6 +28,9 @@ export function BrandProfileHeader({
   bio?: string | null;
   postCount: number;
   followerCount: number;
+  followingCount: number;
+  followersHref: string;
+  followingHref: string;
   action?: ReactNode;
 }) {
   return (
@@ -40,9 +50,12 @@ export function BrandProfileHeader({
           <span className="font-bold text-white">{postCount}</span>{" "}
           <span className="text-zinc-500">{postCount === 1 ? "Post" : "Posts"}</span>
         </div>
-        <div>
+        <Link href={followersHref} className="hover:opacity-80">
           <span className="font-bold text-white">{followerCount}</span> <span className="text-zinc-500">Follower</span>
-        </div>
+        </Link>
+        <Link href={followingHref} className="hover:opacity-80">
+          <span className="font-bold text-white">{followingCount}</span> <span className="text-zinc-500">Folgt</span>
+        </Link>
       </div>
       {action && <div className="mt-4">{action}</div>}
     </div>

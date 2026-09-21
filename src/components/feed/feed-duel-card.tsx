@@ -183,7 +183,9 @@ export function FeedDuelCard({
   // all. Reset to false on every side switch — swiping to the other side
   // should autoplay it, same as TikTok's own next-video behavior.
   const [manuallyPaused, setManuallyPaused] = useState(false);
+  const [showLikePop, setShowLikePop] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const lastTapAt = useRef(0);
 
   const side = duel.sides[sideIndex];
   const opponent = duel.sides[sideIndex === 0 ? 1 : 0];
@@ -258,11 +260,16 @@ export function FeedDuelCard({
   // interfered with, only the gesture's *end* is classified.
   const SWIPE_THRESHOLD_PX = 40;
   const TAP_MAX_MOVEMENT_PX = 10;
+  const DOUBLE_TAP_MS = 300;
 
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
     touchStart.current = { x: e.clientX, y: e.clientY };
   }
 
+  // Phase 35: same double-tap-to-like layered onto the existing tap/swipe
+  // classification — a "tap" (small movement) always toggles pause first
+  // (zero latency), and if it's the second tap within the window, that
+  // second toggle plus a like (never an unlike, matching Instagram).
   function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
     const start = touchStart.current;
     touchStart.current = null;
@@ -272,6 +279,19 @@ export function FeedDuelCard({
 
     if (Math.abs(dx) < TAP_MAX_MOVEMENT_PX && Math.abs(dy) < TAP_MAX_MOVEMENT_PX) {
       setManuallyPaused((p) => !p);
+      const now = Date.now();
+      if (now - lastTapAt.current < DOUBLE_TAP_MS) {
+        lastTapAt.current = 0;
+        if (!isLoggedIn) {
+          window.location.href = "/login";
+          return;
+        }
+        if (!side.viewerLiked) onToggleLike(duel, sideIndex);
+        setShowLikePop(true);
+        setTimeout(() => setShowLikePop(false), 700);
+      } else {
+        lastTapAt.current = now;
+      }
       return;
     }
     if (Math.abs(dx) > SWIPE_THRESHOLD_PX && Math.abs(dx) > Math.abs(dy)) {
@@ -306,7 +326,24 @@ export function FeedDuelCard({
           preload="metadata"
         />
       ))}
-      <div className="absolute inset-0" onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} />
+      {/* Phase 35: `touch-pan-y` (touch-action: pan-y) — without it, a real
+          touchscreen's own gesture recognizer can swallow a horizontal drag
+          on an element nested in a vertically-scrollable ancestor before it
+          ever reaches these pointer handlers; a mouse-drag in dev tools
+          never exercises that path, which is exactly why this looked fine
+          during testing but reportedly didn't work on a real phone. Still
+          never calls preventDefault, so vertical scroll-snap is untouched. */}
+      <div
+        className="absolute inset-0 touch-pan-y"
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+      />
+
+      {showLikePop && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <Heart size={96} className="fill-white text-white drop-shadow-lg" style={{ animation: "like-pop 0.7s ease-out" }} />
+        </div>
+      )}
 
       {manuallyPaused && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3">
@@ -376,23 +413,26 @@ export function FeedDuelCard({
         </div>
       </div>
 
-      {/* Right action rail */}
-      <div className="pointer-events-auto absolute bottom-40 right-3 flex flex-col items-center gap-5">
+      {/* Right action rail — pointer-events-none on the wrapper, auto only
+          on each button, so the gaps between icons (and, on a duel card,
+          anything near this edge) still pass a swipe/tap through to the
+          gesture layer instead of being silently swallowed by empty space. */}
+      <div className="pointer-events-none absolute bottom-40 right-3 flex flex-col items-center gap-5">
         <button
           onClick={() => (isLoggedIn ? onToggleLike(duel, sideIndex) : (window.location.href = "/login"))}
-          className="flex flex-col items-center gap-1 text-white"
+          className="pointer-events-auto flex flex-col items-center gap-1 text-white"
           aria-label="Like"
         >
           <Heart size={30} className={side.viewerLiked ? "fill-red-500 text-red-500" : ""} />
           <span className="text-xs font-medium">{side.likeCount}</span>
         </button>
 
-        <button onClick={() => onOpenComments(duel.battleId)} className="flex flex-col items-center gap-1 text-white">
+        <button onClick={() => onOpenComments(duel.battleId)} className="pointer-events-auto flex flex-col items-center gap-1 text-white">
           <MessageCircle size={28} />
           <span className="text-xs font-medium">{duel.commentCount}</span>
         </button>
 
-        <button onClick={handleShare} className="flex flex-col items-center gap-1 text-white">
+        <button onClick={handleShare} className="pointer-events-auto flex flex-col items-center gap-1 text-white">
           <Share2 size={26} />
           <span className="text-xs font-medium">{shareLabel ? "Kopiert" : "Teilen"}</span>
         </button>
