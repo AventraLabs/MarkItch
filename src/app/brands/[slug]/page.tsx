@@ -8,12 +8,12 @@ import { ChallengeButton } from "@/components/challenge/challenge-button";
 import { FollowButton } from "@/components/brand/follow-button";
 import { CounterForm } from "@/components/battle/counter-form";
 import { BrandProfileHeader } from "@/components/profile/brand-profile-header";
-import { SoloPitchGrid } from "@/components/profile/solo-pitch-grid";
+import { ProfileContentTabs } from "@/components/profile/profile-content-tabs";
 import { getOptionalUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { getLivePendingChallengeBetween } from "@/lib/challenge";
 import { getFollowerCount, getFollowingCountForBrand, isFollowing } from "@/lib/follow";
-import { getExistingOpenBattle } from "@/lib/battle";
+import { getExistingOpenBattle, getProfileDuelTiles } from "@/lib/battle";
 import { getActiveCastingForBrand, getLatestFinishedCastingForBrand } from "@/lib/casting";
 import { currentPeriod, periodLabel, getChartForBrand } from "@/lib/creator-charts";
 import { getFeedSoloPitchesForBrand } from "@/lib/feed";
@@ -39,9 +39,10 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
   const viewer = await getOptionalUser();
   const viewerBrand = viewer ? await getBrandForUser(viewer.id) : null;
   const isOwnBrand = viewerBrand?.id === brand.id;
-  const [soloPitches, livePending, followerCount, followingCount, viewerFollows, existingOpenBattle, activeCasting] =
+  const [soloPitches, duels, livePending, followerCount, followingCount, viewerFollows, existingOpenBattle, activeCasting] =
     await Promise.all([
       getFeedSoloPitchesForBrand(viewer?.id ?? null, brand.id),
+      getProfileDuelTiles(brand.id),
       viewerBrand && !isOwnBrand ? getLivePendingChallengeBetween(viewerBrand.id, brand.id) : null,
       getFollowerCount(brand.id),
       getFollowingCountForBrand(brand.id),
@@ -72,7 +73,7 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
         name={brand.name}
         logoUrl={brand.logoUrl}
         bio={brand.description}
-        postCount={soloPitches.length}
+        postCount={soloPitches.length + duels.length}
         followerCount={followerCount}
         followingCount={followingCount}
         followersHref={`/brands/${brand.slug}/followers`}
@@ -80,9 +81,10 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
         action={viewer && !isOwnBrand ? <FollowButton brandId={brand.id} isFollowing={viewerFollows} /> : undefined}
       />
 
-      {soloPitches.length > 0 ? (
-        <SoloPitchGrid
-          initialPitches={soloPitches}
+      {soloPitches.length + duels.length > 0 ? (
+        <ProfileContentTabs
+          soloPitches={soloPitches}
+          duels={duels}
           isLoggedIn={Boolean(viewer)}
           viewerBrandId={viewerBrand?.id ?? null}
         />

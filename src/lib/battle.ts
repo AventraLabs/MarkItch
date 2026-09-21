@@ -76,6 +76,37 @@ export async function getBattlesForBrand(brandId: string): Promise<BattleWithBra
   return all.filter((b) => b.brandAId === brandId || b.brandBId === brandId);
 }
 
+export type ProfileDuelTile = {
+  battleId: string;
+  videoUrl: string;
+  opponentName: string;
+  opponentSlug: string;
+};
+
+/**
+ * Phase 38: a brand's own live/finished duels, for the profile grid's
+ * "Duelle" tab — Luca: "jedes Profil muss alle Videos... auch die Duell
+ * Videos" zeigen, the grid only ever showed Solo-Pitches. Only battles that
+ * actually went live (`votingEndsAt` set — see activateBattleIfBothSidesReady
+ * in battle-stage.ts) — nothing still waiting on a video, nothing to show
+ * yet. `getBattlesForBrand` already orders newest-first, `.filter()`
+ * preserves that.
+ */
+export async function getProfileDuelTiles(brandId: string): Promise<ProfileDuelTile[]> {
+  const myBattles = await getBattlesForBrand(brandId);
+  const tiles: ProfileDuelTile[] = [];
+  for (const battle of myBattles) {
+    if (!battle.votingEndsAt) continue;
+    const { videoUrlA, videoUrlB } = resolveBattleVideos(battle);
+    const isBrandA = battle.brandAId === brandId;
+    const myVideoUrl = isBrandA ? videoUrlA : videoUrlB;
+    if (!myVideoUrl) continue;
+    const opponent = isBrandA ? battle.brandB : battle.brandA;
+    tiles.push({ battleId: battle.id, videoUrl: myVideoUrl, opponentName: opponent.name, opponentSlug: opponent.slug });
+  }
+  return tiles;
+}
+
 /**
  * Is there already an 'open' battle where `challengerBrandId` countered
  * `targetBrandId`? Used to stop the same brand from countering the same

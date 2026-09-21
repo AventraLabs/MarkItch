@@ -8,8 +8,9 @@ import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { getFollowerCount, getFollowingCountForBrand } from "@/lib/follow";
 import { getFeedSoloPitchesForBrand } from "@/lib/feed";
+import { getProfileDuelTiles } from "@/lib/battle";
 import { CreateBrandForm } from "@/components/brand/create-brand-form";
-import { SoloPitchGrid } from "@/components/profile/solo-pitch-grid";
+import { ProfileContentTabs } from "@/components/profile/profile-content-tabs";
 import { BrandProfileHeader } from "@/components/profile/brand-profile-header";
 
 /**
@@ -33,8 +34,9 @@ export default async function ProfilePage() {
   }
 
   const brand = await getBrandForUser(sessionUser.id);
-  const [mySoloPitches, followerCount, followingCount] = await Promise.all([
+  const [mySoloPitches, myDuels, followerCount, followingCount] = await Promise.all([
     brand ? getFeedSoloPitchesForBrand(sessionUser.id, brand.id) : Promise.resolve([]),
+    brand ? getProfileDuelTiles(brand.id) : Promise.resolve([]),
     brand ? getFollowerCount(brand.id) : Promise.resolve(0),
     brand ? getFollowingCountForBrand(brand.id) : Promise.resolve(0),
   ]);
@@ -54,15 +56,15 @@ export default async function ProfilePage() {
             name={brand.name}
             logoUrl={brand.logoUrl}
             bio={brand.description}
-            postCount={mySoloPitches.length}
+            postCount={mySoloPitches.length + myDuels.length}
             followerCount={followerCount}
             followingCount={followingCount}
             followersHref={`/brands/${brand.slug}/followers`}
             followingHref={`/brands/${brand.slug}/following`}
           />
 
-          {mySoloPitches.length > 0 ? (
-            <SoloPitchGrid initialPitches={mySoloPitches} isLoggedIn viewerBrandId={brand.id} />
+          {mySoloPitches.length + myDuels.length > 0 ? (
+            <ProfileContentTabs soloPitches={mySoloPitches} duels={myDuels} isLoggedIn viewerBrandId={brand.id} />
           ) : (
             <div className="rounded-2xl border border-zinc-800 py-12 text-center">
               <p className="mb-2 text-sm text-zinc-500">Noch nichts gepostet.</p>

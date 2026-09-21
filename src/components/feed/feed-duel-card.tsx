@@ -173,6 +173,7 @@ export function FeedDuelCard({
   const [sideIndex, setSideIndex] = useState<0 | 1>(duel.initialSideIndex);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<[HTMLVideoElement | null, HTMLVideoElement | null]>([null, null]);
+  const slideRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
   const [voting, setVoting] = useState(false);
   const [shareLabel, setShareLabel] = useState<string | null>(null);
@@ -184,8 +185,13 @@ export function FeedDuelCard({
   // should autoplay it, same as TikTok's own next-video behavior.
   const [manuallyPaused, setManuallyPaused] = useState(false);
   const [showLikePop, setShowLikePop] = useState(false);
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
   const lastTapAt = useRef(0);
+  // Phase 38: a real dragging carousel (Luca: "wie auf Instagram... soll
+  // der Bildschirm mit sliden") instead of an instant cut — this ref tracks
+  // the in-progress gesture and directly mutates slideRef's transform on
+  // every pointermove (never React state, which would re-render every
+  // frame and stutter). React only finds out the *outcome* on pointerup.
+  const drag = useRef<{ startX: number; startY: number; horizontal: boolean | null } | null>(null);
 
   const side = duel.sides[sideIndex];
   const opponent = duel.sides[sideIndex === 0 ? 1 : 0];
@@ -226,6 +232,16 @@ export function FeedDuelCard({
     setManuallyPaused(false);
   }
 
+  // Settles the slider to whichever side is current — covers both a
+  // drag-commit (handled inline in handlePointerUp for zero-lag) and a
+  // non-drag switch (the "Antwort ansehen" button, or an initial mount).
+  useEffect(() => {
+    const el = slideRef.current;
+    if (!el) return;
+    el.style.transition = "transform 250ms ease-out";
+    el.style.transform = `translateX(${sideIndex === 0 ? "0%" : "-50%"})`;
+  }, [sideIndex]);
+
   // Phase 16: a "view" is this side's video actually playing on screen —
   // once per side per card, not per re-render (flipping back and forth
   // shouldn't inflate the count).
@@ -252,51 +268,91 @@ export function FeedDuelCard({
     setTimeout(() => setShareLabel(null), 1800);
   }
 
-  // Phase 30: swipe left/right between the two sides, tap to pause/resume —
-  // Luca's report that the old "left third / right third = switch, middle =
-  // mute" zones didn't match any real short-video app. Uses pointer events
-  // (unifies touch + mouse) on down/up only — never touchmove/preventDefault
-  // — so the page's own vertical scroll-snap between feed cards is never
-  // interfered with, only the gesture's *end* is classified.
-  const SWIPE_THRESHOLD_PX = 40;
+  // Phase 38: a real dragging carousel between the two sides (Luca: "wie
+  // auf Instagram... soll der Bildschirm mit sliden", not an instant cut),
+  // tap to pause/resume — pointer events (unifies touch + mouse), never
+  // preventDefault, so the page's own vertical scroll-snap between feed
+  // cards is never interfered with; a vertical-intent gesture is simply
+  // abandoned here (drag.current.horizontal = false) and left to the
+  // browser's native scroll.
+  const COMMIT_FRACTION = 0.25; // drag past 25% of the card's width commits the side switch
   const TAP_MAX_MOVEMENT_PX = 10;
   const DOUBLE_TAP_MS = 300;
 
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    touchStart.current = { x: e.clientX, y: e.clientY };
+    drag.current = { startX: e.clientX, startY: e.clientY, horizontal: null };
   }
 
-  // Phase 35: same double-tap-to-like layered onto the existing tap/swipe
-  // classification — a "tap" (small movement) always toggles pause first
-  // (zero latency), and if it's the second tap within the window, that
-  // second toggle plus a like (never an unlike, matching Instagram).
-  function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
-    const start = touchStart.current;
-    touchStart.current = null;
-    if (!start) return;
-    const dx = e.clientX - start.x;
-    const dy = e.clientY - start.y;
+  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const d = drag.current;
+    if (!d || d.horizontal === false) return;
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    if (d.horizontal === null) {
+      if (Math.abs(dx) < TAP_MAX_MOVEMENT_PX && Math.abs(dy) < TAP_MAX_MOVEMENT_PX) return; // not decided yet
+      d.horizontal = Math.abs(dx) > Math.abs(dy);
+      if (!d.horizontal) return; // vertical intent — hand off to native scroll, do nothing more
+    }
+    // Resistance at the ends — there's no third side to reveal.
+    const clampedDx = sideIndex === 0 ? Math.min(0, dx) : Math.max(0, dx);
+    const width = containerRef.current?.clientWidth || window.innerWidth;
+    const dragPercentOfSlider = (clampedDx / width) * 50; // 50% of the 200%-wide slider == 100% of the card
+    const basePercent = sideIndex === 0 ? 0 : -50;
+    const el = slideRef.current;
+    if (el) {
+      el.style.transition = "none";
+      el.style.transform = `translateX(calc(${basePercent}% + ${dragPercentOfSlider}%))`;
+    }
+  }
 
-    if (Math.abs(dx) < TAP_MAX_MOVEMENT_PX && Math.abs(dy) < TAP_MAX_MOVEMENT_PX) {
-      setManuallyPaused((p) => !p);
-      const now = Date.now();
-      if (now - lastTapAt.current < DOUBLE_TAP_MS) {
-        lastTapAt.current = 0;
-        if (!isLoggedIn) {
-          window.location.href = "/login";
+  // Phase 35: double-tap-to-like layered onto tap/drag classification — a
+  // "tap" (small movement) always toggles pause first (zero latency), and
+  // if it's the second tap within the window, that second toggle plus a
+  // like (never an unlike, matching Instagram).
+  function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    const d = drag.current;
+    drag.current = null;
+    if (!d) return;
+
+    if (d.horizontal) {
+      const dx = e.clientX - d.startX;
+      const width = containerRef.current?.clientWidth || window.innerWidth;
+      if (Math.abs(dx) > width * COMMIT_FRACTION) {
+        if (dx < 0 && sideIndex === 0) {
+          switchSide(1);
           return;
         }
-        if (!side.viewerLiked) onToggleLike(duel, sideIndex);
-        setShowLikePop(true);
-        setTimeout(() => setShowLikePop(false), 700);
-      } else {
-        lastTapAt.current = now;
+        if (dx > 0 && sideIndex === 1) {
+          switchSide(0);
+          return;
+        }
+      }
+      // Below threshold (or at an edge with nowhere to go) — snap back;
+      // the settle effect handles the actual transform since sideIndex
+      // hasn't changed.
+      const el = slideRef.current;
+      if (el) {
+        el.style.transition = "transform 250ms ease-out";
+        el.style.transform = `translateX(${sideIndex === 0 ? "0%" : "-50%"})`;
       }
       return;
     }
-    if (Math.abs(dx) > SWIPE_THRESHOLD_PX && Math.abs(dx) > Math.abs(dy)) {
-      if (dx < 0 && sideIndex === 0) switchSide(1);
-      else if (dx > 0 && sideIndex === 1) switchSide(0);
+    if (d.horizontal === false) return; // was a vertical gesture, not ours to handle
+
+    // d.horizontal === null: never moved past the tap threshold — a tap.
+    setManuallyPaused((p) => !p);
+    const now = Date.now();
+    if (now - lastTapAt.current < DOUBLE_TAP_MS) {
+      lastTapAt.current = 0;
+      if (!isLoggedIn) {
+        window.location.href = "/login";
+        return;
+      }
+      if (!side.viewerLiked) onToggleLike(duel, sideIndex);
+      setShowLikePop(true);
+      setTimeout(() => setShowLikePop(false), 700);
+    } else {
+      lastTapAt.current = now;
     }
   }
 
@@ -312,20 +368,29 @@ export function FeedDuelCard({
       data-battle-id={duel.battleId}
       className="relative h-dvh w-full snap-start snap-always bg-black"
     >
-      {duel.sides.map((s, i) => (
-        <video
-          key={s.brandId}
-          ref={(el) => {
-            videoRefs.current[i] = el;
-          }}
-          src={s.videoUrl}
-          className={`absolute inset-0 h-full w-full object-cover ${i === sideIndex ? "" : "hidden"}`}
-          loop
-          muted={muted}
-          playsInline
-          preload="metadata"
-        />
-      ))}
+      {/* Phase 38: both sides sit side by side in one 200%-wide strip — the
+          only way to actually *slide* between them (a `hidden` toggle can
+          only ever cut instantly). slideRef's transform is mutated directly
+          in handlePointerMove, bypassing React state, so dragging tracks
+          the finger at full frame rate instead of re-rendering on every
+          pointermove. */}
+      <div ref={slideRef} className="absolute inset-y-0 left-0 flex h-full" style={{ width: "200%" }}>
+        {duel.sides.map((s, i) => (
+          <div key={s.brandId} className="relative h-full w-1/2">
+            <video
+              ref={(el) => {
+                videoRefs.current[i] = el;
+              }}
+              src={s.videoUrl}
+              className="absolute inset-0 h-full w-full object-cover"
+              loop
+              muted={muted}
+              playsInline
+              preload="metadata"
+            />
+          </div>
+        ))}
+      </div>
       {/* Phase 35: `touch-pan-y` (touch-action: pan-y) — without it, a real
           touchscreen's own gesture recognizer can swallow a horizontal drag
           on an element nested in a vertically-scrollable ancestor before it
@@ -336,6 +401,7 @@ export function FeedDuelCard({
       <div
         className="absolute inset-0 touch-pan-y"
         onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       />
 
