@@ -20,6 +20,18 @@ import { ReportButton } from "@/components/moderation/report-button";
 import type { FeedDuel } from "@/lib/feed";
 import { trackAnalyticsEvent } from "@/lib/analytics-client";
 
+// Phase 39: both sides of a duel are now always mounted side by side (the
+// Phase 38 sliding carousel) instead of only the active one — the inactive
+// side used to never exist in the DOM at all, so it never needed this.
+// `preload="metadata"` alone only guarantees duration/dimensions, not an
+// actually decoded/visible frame, in every browser — without this, the
+// side you swipe *to* was still just solid black until it became active
+// and started playing. Same trick as the profile grid thumbnails.
+function showFirstFrame(video: HTMLVideoElement) {
+  if (video.readyState >= 1) video.currentTime = 0.1;
+  else video.addEventListener("loadedmetadata", () => (video.currentTime = 0.1), { once: true });
+}
+
 function timeLeftLabel(iso: string): string {
   const hoursLeft = Math.max(0, (new Date(iso).getTime() - Date.now()) / (60 * 60 * 1000));
   if (hoursLeft >= 24) return `${Math.ceil(hoursLeft / 24)} Tage`;
@@ -380,6 +392,7 @@ export function FeedDuelCard({
             <video
               ref={(el) => {
                 videoRefs.current[i] = el;
+                if (el) showFirstFrame(el);
               }}
               src={s.videoUrl}
               className="absolute inset-0 h-full w-full object-cover"

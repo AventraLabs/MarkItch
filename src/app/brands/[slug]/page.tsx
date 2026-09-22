@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { brands } from "@/db/schema";
 import Link from "next/link";
-import { VideoPlayer } from "@/components/brand/video-player";
 import { ChallengeButton } from "@/components/challenge/challenge-button";
 import { FollowButton } from "@/components/brand/follow-button";
 import { CounterForm } from "@/components/battle/counter-form";
@@ -81,12 +80,13 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
         action={viewer && !isOwnBrand ? <FollowButton brandId={brand.id} isFollowing={viewerFollows} /> : undefined}
       />
 
-      {soloPitches.length + duels.length > 0 ? (
+      {soloPitches.length + duels.length > 0 || brand.videoUrl ? (
         <ProfileContentTabs
           soloPitches={soloPitches}
           duels={duels}
           isLoggedIn={Boolean(viewer)}
           viewerBrandId={viewerBrand?.id ?? null}
+          legacyVideoUrl={brand.videoUrl}
         />
       ) : (
         <div className="rounded-2xl border border-zinc-800 py-12 text-center">
@@ -108,19 +108,10 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
           </a>
         )}
 
-        {brand.videoUrl && (
-          <div>
-            {/* Phase 35: labeled — Luca's report of an empty "Noch nichts
-                gepostet" grid with an unexplained huge video right under it
-                ("Stitchlab") was this legacy single-video field (predates
-                solo pitches, Phase 13) rendering with no context at all. */}
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Vorstellungsvideo</p>
-            <div className="mx-auto max-w-[280px]">
-              <VideoPlayer src={brand.videoUrl} />
-            </div>
-          </div>
-        )}
-
+        {/* Phase 39: the video itself moved into the "Videos" tab above
+            (Luca: "wieso ist das nicht einfach im Tab Videos?") — this
+            section now only carries the *action* tied to it (Antworten),
+            not a second copy of the video itself. */}
         {brand.videoUrl && viewerBrand && !isOwnBrand && (
           <div className="text-center">
             {existingOpenBattle ? (

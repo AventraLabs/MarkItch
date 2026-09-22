@@ -26,7 +26,10 @@ export default async function BrandFollowersPage({ params }: { params: Promise<{
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800 text-sm font-bold text-zinc-400">
                   {f.label.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-sm font-medium text-white">{f.label}</span>
+                <div>
+                  <p className="text-sm font-medium text-white">{f.label}</p>
+                  {!f.link && <p className="text-xs text-zinc-500">Zuschauer:in — kein eigenes Profil</p>}
+                </div>
               </div>
             );
             return <li key={f.userId}>{f.link ? <Link href={f.link}>{row}</Link> : row}</li>;

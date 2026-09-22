@@ -63,8 +63,14 @@ export default async function ProfilePage() {
             followingHref={`/brands/${brand.slug}/following`}
           />
 
-          {mySoloPitches.length + myDuels.length > 0 ? (
-            <ProfileContentTabs soloPitches={mySoloPitches} duels={myDuels} isLoggedIn viewerBrandId={brand.id} />
+          {mySoloPitches.length + myDuels.length > 0 || brand.videoUrl ? (
+            <ProfileContentTabs
+              soloPitches={mySoloPitches}
+              duels={myDuels}
+              isLoggedIn
+              viewerBrandId={brand.id}
+              legacyVideoUrl={brand.videoUrl}
+            />
           ) : (
             <div className="rounded-2xl border border-zinc-800 py-12 text-center">
               <p className="mb-2 text-sm text-zinc-500">Noch nichts gepostet.</p>
