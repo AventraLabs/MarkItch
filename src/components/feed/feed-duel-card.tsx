@@ -439,8 +439,14 @@ export function FeedDuelCard({
         </div>
       )}
 
-      {/* Two-sides indicator + edge chevrons */}
-      <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center gap-1.5">
+      {/* Two-sides indicator + edge chevrons. top-4 alone (fixed 16px) sat in
+          the same band as feed-client.tsx's safe-area-aware "Feed"/"Folge
+          ich" tabs on any notch/Dynamic-Island phone, overlapping them —
+          matches that tab bar's own inset instead. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 flex justify-center gap-1.5"
+        style={{ top: "calc(env(safe-area-inset-top) + 44px)" }}
+      >
         {([0, 1] as const).map((i) => (
           <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === sideIndex ? "bg-white" : "bg-white/30"}`} />
         ))}
