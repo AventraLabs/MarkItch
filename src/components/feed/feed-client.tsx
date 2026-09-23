@@ -6,7 +6,7 @@ import type { FeedDuel, FeedItem, FeedPage, FeedSoloPitch } from "@/lib/feed";
 import { FeedDuelCard } from "@/components/feed/feed-duel-card";
 import { FeedSoloPitchCard } from "@/components/feed/feed-solo-pitch-card";
 import { CommentSheet, type CommentTarget } from "@/components/feed/comment-sheet";
-import { ReactionsFeed } from "@/components/pitches/reactions-feed";
+import { ReactionsOverlay } from "@/components/pitches/reactions-overlay";
 import { getNotificationPermission, subscribeToPush } from "@/lib/push-client";
 
 type Tab = "foryou" | "following";
@@ -421,11 +421,12 @@ export function FeedClient({
             | FeedSoloPitch
             | undefined;
           return (
-            <ReactionsFeed
+            <ReactionsOverlay
               soloPitchId={reactionsSoloPitchId}
               isLoggedIn={isLoggedIn}
               canPostReaction={Boolean(viewerBrandId && pitch && viewerBrandId !== pitch.brandId)}
               canPromote={Boolean(viewerBrandId && pitch && viewerBrandId === pitch.brandId)}
+              viewerBrandId={viewerBrandId}
               onClose={() => setReactionsSoloPitchId(null)}
               onReactionCountChange={handleReactionCountChange}
             />

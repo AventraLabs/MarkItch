@@ -2,12 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Heart, Play, Volume2, VolumeX } from "lucide-react";
+import { Heart, MessageSquareShare, Play, Volume2, VolumeX } from "lucide-react";
 import { PromoteReactionButton } from "@/components/pitches/promote-reaction-button";
 import { ReportButton } from "@/components/moderation/report-button";
-import type { ReactionWithBrand } from "@/lib/reaction";
-
-type ReactionRow = Omit<ReactionWithBrand, "createdAt"> & { createdAt: string };
+import type { ReactionRow } from "@/lib/reaction-threads";
 
 /**
  * Phase 34: one reaction, full-screen — same visual language as
@@ -17,21 +15,30 @@ type ReactionRow = Omit<ReactionWithBrand, "createdAt"> & { createdAt: string };
  * never got their own comment thread (see schema.ts's comment on
  * `comments`, "discussion stays on the pitch itself"), a real schema
  * addition if that's wanted later, not part of this pass.
+ *
+ * Phase 40: `canReply` + `onReply` — a reaction can now itself be replied
+ * to, chaining two brands back and forth ("Coke vs. Pepsi"). A reply shows
+ * an "Antwort im Thread" badge instead of "Reaktion" so the chain reads
+ * clearly while scrolling through it.
  */
 export function ReactionFeedCard({
   reaction,
   isLoggedIn,
   canPromote,
+  canReply,
   muted,
   onToggleMute,
   onToggleLike,
+  onReply,
 }: {
   reaction: ReactionRow;
   isLoggedIn: boolean;
   canPromote: boolean;
+  canReply: boolean;
   muted: boolean;
   onToggleMute: () => void;
   onToggleLike: (reactionId: string) => void;
+  onReply: (reactionId: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -118,7 +125,9 @@ export function ReactionFeedCard({
           <Link href={`/brands/${reaction.brand.slug}`} className="text-sm font-bold text-white hover:underline">
             {reaction.brand.name}
           </Link>
-          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-zinc-300">Reaktion</span>
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
+            {reaction.parentReactionId ? "Antwort im Thread" : "Reaktion"}
+          </span>
         </div>
         {reaction.promotedToBattleId && (
           <Link href={`/pitches/${reaction.promotedToBattleId}`} className="pointer-events-auto text-sm text-orange-400 hover:underline">
@@ -141,6 +150,13 @@ export function ReactionFeedCard({
           <Heart size={30} className={reaction.viewerLiked ? "fill-red-500 text-red-500" : ""} />
           <span className="text-xs font-medium">{reaction.likeCount}</span>
         </button>
+
+        {canReply && (
+          <button onClick={() => onReply(reaction.id)} className="pointer-events-auto flex flex-col items-center gap-1 text-white" aria-label="Antworten">
+            <MessageSquareShare size={28} />
+            <span className="text-xs font-medium">Antworten</span>
+          </button>
+        )}
 
         <ReportButton targetType="reaction" targetId={reaction.id} isLoggedIn={isLoggedIn} />
       </div>

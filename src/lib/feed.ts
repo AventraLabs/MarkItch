@@ -417,6 +417,18 @@ export async function getFeedSoloPitchesForBrand(viewerId: string | null, brandI
   return items.filter((p) => p.brandId === brandId);
 }
 
+/**
+ * Phase 40: same purpose as getFeedSoloPitchesForBrand, for the profile
+ * grid's "Duelle" tab — Luca: clicking a duel tile there landed in the
+ * global feed instead of staying on this profile; needs the full
+ * viewer-relative FeedDuel shape (likes/comments/vote state), not just the
+ * thumbnail-only ProfileDuelTile, because it reuses FeedDuelCard itself.
+ */
+export async function getFeedDuelsForBrand(viewerId: string | null, brandId: string): Promise<FeedDuel[]> {
+  const duels = await buildFeedDuels(viewerId);
+  return duels.filter((d) => d.sides.some((s) => s.brandId === brandId));
+}
+
 /** "Folge ich" — Duelle with a followed brand on either side, plus solo pitches from a followed brand, newest first. */
 export async function getFollowingFeed(viewerId: string, offset = 0, limit = 6): Promise<FeedPage> {
   const followedBrandIds = await getFollowedBrandIds(viewerId);

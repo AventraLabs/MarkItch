@@ -153,12 +153,31 @@ export async function respondToChallenge(_prevState: RespondFormState, formData:
   // (brandA) has to upload. uploadBattleVideo/activateBattleIfBothSidesReady
   // need no changes for this: a battle with one side already filled behaves
   // exactly like one where that side uploaded first, same as today.
+  //
+  // Phase 40: a plain "Duell einladen" from a profile (no soloPitchId) used
+  // to always require the challenged brand to produce a fresh video — even
+  // if all they have is the old pre-Solo-Pitch showcase video
+  // (brands.videoUrl). That case used to go through a separate "Antworten"/
+  // counterWithVideo path instead (immediate, no accept step); now it's
+  // just this same accept flow, prefilled the same way a solo pitch would
+  // be, so there's one consistent "invite → accept → produce" path instead
+  // of two different mechanics depending on whether the target has posted
+  // a real Solo-Pitch yet.
   if (decision === "accept") {
     let prefilledBrandBVideo: { brandBVideoUrl: string; brandBSubmittedAt: Date } | Record<string, never> = {};
     if (challenge.soloPitchId) {
       const [pitch] = await db.select().from(soloPitches).where(eq(soloPitches.id, challenge.soloPitchId)).limit(1);
       if (pitch) {
         prefilledBrandBVideo = { brandBVideoUrl: pitch.videoUrl, brandBSubmittedAt: pitch.createdAt };
+      }
+    } else {
+      const [existingPitch] = await db
+        .select({ id: soloPitches.id })
+        .from(soloPitches)
+        .where(eq(soloPitches.brandId, myBrand.id))
+        .limit(1);
+      if (!existingPitch && myBrand.videoUrl) {
+        prefilledBrandBVideo = { brandBVideoUrl: myBrand.videoUrl, brandBSubmittedAt: myBrand.videoUploadedAt ?? new Date() };
       }
     }
     await db.insert(battles).values({

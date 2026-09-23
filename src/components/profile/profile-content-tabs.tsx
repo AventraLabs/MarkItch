@@ -4,8 +4,7 @@ import { useState } from "react";
 import { SoloPitchGrid } from "@/components/profile/solo-pitch-grid";
 import { DuelGrid } from "@/components/profile/duel-grid";
 import { VideoPlayer } from "@/components/brand/video-player";
-import type { FeedSoloPitch } from "@/lib/feed";
-import type { ProfileDuelTile } from "@/lib/battle";
+import type { FeedSoloPitch, FeedDuel } from "@/lib/feed";
 
 /**
  * Phase 38: Luca's report — a profile only ever showed Solo-Pitches, never
@@ -26,12 +25,14 @@ import type { ProfileDuelTile } from "@/lib/battle";
 export function ProfileContentTabs({
   soloPitches,
   duels,
+  profileBrandId,
   isLoggedIn,
   viewerBrandId,
   legacyVideoUrl,
 }: {
   soloPitches: FeedSoloPitch[];
-  duels: ProfileDuelTile[];
+  duels: FeedDuel[];
+  profileBrandId: string;
   isLoggedIn: boolean;
   viewerBrandId?: string | null;
   legacyVideoUrl?: string | null;
@@ -45,7 +46,11 @@ export function ProfileContentTabs({
           onClick={() => setTab("solo")}
           className={`flex-1 border-b-2 py-2.5 ${tab === "solo" ? "border-orange-500 text-white" : "border-transparent text-zinc-500"}`}
         >
-          Videos ({soloPitches.length})
+          {/* Phase 40: showed "(0)" even while a legacy video was visibly
+              rendered right below — the count only ever reflected real
+              Solo-Pitches. Count the legacy video as 1 here too so the
+              number matches what's actually on screen. */}
+          Videos ({soloPitches.length > 0 ? soloPitches.length : legacyVideoUrl ? 1 : 0})
         </button>
         <button
           onClick={() => setTab("duels")}
@@ -69,7 +74,7 @@ export function ProfileContentTabs({
           <p className="py-8 text-center text-sm text-zinc-500">Noch keine Videos gepostet.</p>
         )
       ) : duels.length > 0 ? (
-        <DuelGrid duels={duels} />
+        <DuelGrid duels={duels} isLoggedIn={isLoggedIn} ownBrandId={profileBrandId} />
       ) : (
         <p className="py-8 text-center text-sm text-zinc-500">Noch keine Duelle.</p>
       )}

@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, uniqueIndex, index, integer } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, uniqueIndex, index, integer, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // Phase 1: just what real authentication needs.
@@ -446,6 +446,17 @@ export type NewSoloPitch = typeof soloPitches.$inferInsert;
 // pitch's own brand "hochstuft" this reaction into an official Duell — kept
 // on the reaction rather than inferred, so the UI can show "already a
 // Duell" without re-deriving it.
+//
+// Phase 40: `parentReactionId` — a reaction can reply to another reaction
+// instead of only ever to the original solo pitch, so two brands can go
+// back and forth ("Coke vs. Pepsi", Luca's own example) instead of every
+// reply piling onto the same pitch as a flat, unordered list.
+// `soloPitchId` stays set even on a reply (denormalized root) so the whole
+// chain still loads/groups under one pitch without walking parent links.
+// The old "one reaction per brand per pitch" unique index is replaced by
+// two narrower ones: a brand may still only post one *top-level* reaction
+// per pitch, but can each reply once per specific reaction it's answering
+// — that's what makes an actual back-and-forth chain possible.
 export const reactions = pgTable(
   "reactions",
   {
@@ -456,11 +467,19 @@ export const reactions = pgTable(
     brandId: uuid("brand_id")
       .notNull()
       .references(() => brands.id, { onDelete: "cascade" }),
+    parentReactionId: uuid("parent_reaction_id").references((): AnyPgColumn => reactions.id, { onDelete: "cascade" }),
     videoUrl: text("video_url").notNull(),
     promotedToBattleId: uuid("promoted_to_battle_id").references(() => battles.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("reactions_solo_pitch_brand_unique_idx").on(table.soloPitchId, table.brandId)],
+  (table) => [
+    uniqueIndex("reactions_solo_pitch_brand_top_level_unique_idx")
+      .on(table.soloPitchId, table.brandId)
+      .where(sql`${table.parentReactionId} is null`),
+    uniqueIndex("reactions_parent_reaction_brand_unique_idx")
+      .on(table.parentReactionId, table.brandId)
+      .where(sql`${table.parentReactionId} is not null`),
+  ],
 );
 
 export type Reaction = typeof reactions.$inferSelect;

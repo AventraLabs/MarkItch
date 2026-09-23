@@ -5,17 +5,15 @@ import { brands } from "@/db/schema";
 import Link from "next/link";
 import { ChallengeButton } from "@/components/challenge/challenge-button";
 import { FollowButton } from "@/components/brand/follow-button";
-import { CounterForm } from "@/components/battle/counter-form";
 import { BrandProfileHeader } from "@/components/profile/brand-profile-header";
 import { ProfileContentTabs } from "@/components/profile/profile-content-tabs";
 import { getOptionalUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { getLivePendingChallengeBetween } from "@/lib/challenge";
 import { getFollowerCount, getFollowingCountForBrand, isFollowing } from "@/lib/follow";
-import { getExistingOpenBattle, getProfileDuelTiles } from "@/lib/battle";
 import { getActiveCastingForBrand, getLatestFinishedCastingForBrand } from "@/lib/casting";
 import { currentPeriod, periodLabel, getChartForBrand } from "@/lib/creator-charts";
-import { getFeedSoloPitchesForBrand } from "@/lib/feed";
+import { getFeedSoloPitchesForBrand, getFeedDuelsForBrand } from "@/lib/feed";
 
 // Note: this page already reads the session (getOptionalUser -> auth(),
 // which touches cookies), so Next treats it as dynamic automatically —
@@ -38,17 +36,15 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
   const viewer = await getOptionalUser();
   const viewerBrand = viewer ? await getBrandForUser(viewer.id) : null;
   const isOwnBrand = viewerBrand?.id === brand.id;
-  const [soloPitches, duels, livePending, followerCount, followingCount, viewerFollows, existingOpenBattle, activeCasting] =
-    await Promise.all([
-      getFeedSoloPitchesForBrand(viewer?.id ?? null, brand.id),
-      getProfileDuelTiles(brand.id),
-      viewerBrand && !isOwnBrand ? getLivePendingChallengeBetween(viewerBrand.id, brand.id) : null,
-      getFollowerCount(brand.id),
-      getFollowingCountForBrand(brand.id),
-      viewer && !isOwnBrand ? isFollowing(viewer.id, brand.id) : false,
-      viewerBrand && !isOwnBrand ? getExistingOpenBattle(brand.id, viewerBrand.id) : null,
-      getActiveCastingForBrand(brand.id),
-    ]);
+  const [soloPitches, duels, livePending, followerCount, followingCount, viewerFollows, activeCasting] = await Promise.all([
+    getFeedSoloPitchesForBrand(viewer?.id ?? null, brand.id),
+    getFeedDuelsForBrand(viewer?.id ?? null, brand.id),
+    viewerBrand && !isOwnBrand ? getLivePendingChallengeBetween(viewerBrand.id, brand.id) : null,
+    getFollowerCount(brand.id),
+    getFollowingCountForBrand(brand.id),
+    viewer && !isOwnBrand ? isFollowing(viewer.id, brand.id) : false,
+    getActiveCastingForBrand(brand.id),
+  ]);
   // Only bother looking up a finished casting's result if there's no
   // active one to show instead — a brand always has at most one relevant
   // casting to display at a time.
@@ -84,6 +80,7 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
         <ProfileContentTabs
           soloPitches={soloPitches}
           duels={duels}
+          profileBrandId={brand.id}
           isLoggedIn={Boolean(viewer)}
           viewerBrandId={viewerBrand?.id ?? null}
           legacyVideoUrl={brand.videoUrl}
@@ -108,21 +105,6 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
           </a>
         )}
 
-        {/* Phase 39: the video itself moved into the "Videos" tab above
-            (Luca: "wieso ist das nicht einfach im Tab Videos?") — this
-            section now only carries the *action* tied to it (Antworten),
-            not a second copy of the video itself. */}
-        {brand.videoUrl && viewerBrand && !isOwnBrand && (
-          <div className="text-center">
-            {existingOpenBattle ? (
-              <Link href={`/pitches/${existingOpenBattle.id}`} className="text-sm text-orange-500 hover:underline">
-                Du hast auf diese Marke bereits geantwortet — Pitch ansehen →
-              </Link>
-            ) : (
-              <CounterForm targetBrandId={brand.id} />
-            )}
-          </div>
-        )}
 
         <div className="rounded-lg border border-zinc-800 p-4 text-center">
           <p className="mb-2 text-sm text-zinc-300">

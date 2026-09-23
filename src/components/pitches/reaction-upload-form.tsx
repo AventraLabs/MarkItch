@@ -5,7 +5,15 @@ import { postReaction, type ReactionFormState } from "@/app/actions/reaction";
 import { FormError, SubmitButton } from "@/components/ui";
 import { VideoPickerInput } from "@/components/video-picker-input";
 
-export function ReactionUploadForm({ soloPitchId, onPosted }: { soloPitchId: string; onPosted: () => void }) {
+export function ReactionUploadForm({
+  soloPitchId,
+  parentReactionId,
+  onPosted,
+}: {
+  soloPitchId: string;
+  parentReactionId?: string | null;
+  onPosted: () => void;
+}) {
   const [state, action, isPending] = useActionState<ReactionFormState, FormData>(postReaction, undefined);
   const wasPending = useRef(false);
   const [clientError, setClientError] = useState<string | null>(null);
@@ -42,6 +50,7 @@ export function ReactionUploadForm({ soloPitchId, onPosted }: { soloPitchId: str
   return (
     <form action={action} onSubmit={handleSubmit} className="rounded-xl border border-zinc-800 p-3">
       <input type="hidden" name="soloPitchId" value={soloPitchId} />
+      {parentReactionId && <input type="hidden" name="parentReactionId" value={parentReactionId} />}
       <FormError message={clientError ?? state?.error} />
       <VideoPickerInput
         folder="reaction-videos"
@@ -50,7 +59,7 @@ export function ReactionUploadForm({ soloPitchId, onPosted }: { soloPitchId: str
           setVideoUploaded(Boolean(uploadedUrl));
         }}
       />
-      <SubmitButton>Reaktion posten</SubmitButton>
+      <SubmitButton>{parentReactionId ? "Antwort posten" : "Reaktion posten"}</SubmitButton>
     </form>
   );
 }

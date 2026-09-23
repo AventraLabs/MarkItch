@@ -5,7 +5,13 @@ import { Swords } from "lucide-react";
 import { sendChallengeFromSoloPitch, type ChallengeFormState } from "@/app/actions/challenge";
 import { FormError, SubmitButton } from "@/components/ui";
 
-/** "Pitch schicken" — direct challenge off a solo pitch, see CLAUDE-CODE-UEBERGABE.md §6. */
+/**
+ * "Duell einladen" — direct invite off a solo pitch, see
+ * CLAUDE-CODE-UEBERGABE.md §6. Same label/action everywhere a brand can be
+ * invited to a duel (this button, ChallengeButton on a profile) — Phase 40:
+ * previously called "Pitch schicken" here vs. "Einladen" on a profile,
+ * two names for the same thing.
+ */
 export function PitchChallengeButton({ soloPitchId }: { soloPitchId: string }) {
   const [state, action] = useActionState<ChallengeFormState, FormData>(sendChallengeFromSoloPitch, undefined);
 
@@ -14,7 +20,7 @@ export function PitchChallengeButton({ soloPitchId }: { soloPitchId: string }) {
       <input type="hidden" name="soloPitchId" value={soloPitchId} />
       <FormError message={state?.error} />
       <SubmitButton>
-        <Swords size={14} className="inline -mt-0.5 mr-1" /> Pitch schicken
+        <Swords size={14} className="inline -mt-0.5 mr-1" /> Duell einladen
       </SubmitButton>
     </form>
   );

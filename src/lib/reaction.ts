@@ -70,15 +70,19 @@ export async function getReactionById(id: string): Promise<Reaction | null> {
 
 /**
  * The original brand upgrades an already-posted, already-liked reaction
- * straight to an official Duell — both videos exist already, so this is
- * exactly the 'open' mode battle.ts/counterWithVideo already knows how to
- * activate, just entered from the other direction (the *original* brand
- * acts, not the reactor). Returns the new battle's id.
+ * straight to an official Duell — both videos exist already, so this just
+ * inserts an already-'open'-mode battle and activates it right away, same
+ * as any other pre-filled battle. Returns the new battle's id.
  */
 export async function promoteReactionToBattle(reactionId: string, actingBrandId: string): Promise<string> {
   const [reaction] = await db.select().from(reactions).where(eq(reactions.id, reactionId)).limit(1);
   if (!reaction) throw new Error("Diese Reaktion existiert nicht.");
   if (reaction.promotedToBattleId) throw new Error("Diese Reaktion ist bereits ein offizielles Duell.");
+  // Phase 40: only a direct reaction to the pitch can become a Duell
+  // against the pitch's own brand — a reply deep in a chain is between
+  // whichever two brands are actually replying to each other, which this
+  // function (soloPitch.brandId vs. reaction.brandId) isn't set up for.
+  if (reaction.parentReactionId) throw new Error("Nur eine direkte Reaktion auf den Pitch kann hochgestuft werden.");
 
   const [soloPitch] = await db.select().from(soloPitches).where(eq(soloPitches.id, reaction.soloPitchId)).limit(1);
   if (!soloPitch) throw new Error("Der zugehörige Pitch existiert nicht mehr.");

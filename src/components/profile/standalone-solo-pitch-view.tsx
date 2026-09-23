@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FeedSoloPitchCard } from "@/components/feed/feed-solo-pitch-card";
 import { CommentSheet, type CommentTarget } from "@/components/feed/comment-sheet";
-import { ReactionsFeed } from "@/components/pitches/reactions-feed";
+import { ReactionsOverlay } from "@/components/pitches/reactions-overlay";
 import type { FeedSoloPitch } from "@/lib/feed";
 
 /**
@@ -18,6 +18,7 @@ export function StandaloneSoloPitchView({
   pitch: initialPitch,
   isLoggedIn,
   viewerHasOtherBrand,
+  viewerBrandId,
   onClose,
   onUpdated,
   onDeleted,
@@ -25,6 +26,7 @@ export function StandaloneSoloPitchView({
   pitch: FeedSoloPitch;
   isLoggedIn: boolean;
   viewerHasOtherBrand: boolean;
+  viewerBrandId?: string | null;
   onClose: () => void;
   onUpdated: (patch: Partial<FeedSoloPitch>) => void;
   onDeleted: () => void;
@@ -91,11 +93,12 @@ export function StandaloneSoloPitchView({
       )}
 
       {reactionsOpen && (
-        <ReactionsFeed
+        <ReactionsOverlay
           soloPitchId={pitch.soloPitchId}
           isLoggedIn={isLoggedIn}
           canPostReaction={viewerHasOtherBrand}
           canPromote={pitch.viewerOwnsThisBrand}
+          viewerBrandId={viewerBrandId}
           onClose={() => setReactionsOpen(false)}
           onReactionCountChange={(_id, count) => patch({ reactionCount: count })}
         />

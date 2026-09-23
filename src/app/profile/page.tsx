@@ -7,8 +7,7 @@ import { users } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { getFollowerCount, getFollowingCountForBrand } from "@/lib/follow";
-import { getFeedSoloPitchesForBrand } from "@/lib/feed";
-import { getProfileDuelTiles } from "@/lib/battle";
+import { getFeedSoloPitchesForBrand, getFeedDuelsForBrand } from "@/lib/feed";
 import { CreateBrandForm } from "@/components/brand/create-brand-form";
 import { ProfileContentTabs } from "@/components/profile/profile-content-tabs";
 import { BrandProfileHeader } from "@/components/profile/brand-profile-header";
@@ -36,7 +35,7 @@ export default async function ProfilePage() {
   const brand = await getBrandForUser(sessionUser.id);
   const [mySoloPitches, myDuels, followerCount, followingCount] = await Promise.all([
     brand ? getFeedSoloPitchesForBrand(sessionUser.id, brand.id) : Promise.resolve([]),
-    brand ? getProfileDuelTiles(brand.id) : Promise.resolve([]),
+    brand ? getFeedDuelsForBrand(sessionUser.id, brand.id) : Promise.resolve([]),
     brand ? getFollowerCount(brand.id) : Promise.resolve(0),
     brand ? getFollowingCountForBrand(brand.id) : Promise.resolve(0),
   ]);
@@ -67,6 +66,7 @@ export default async function ProfilePage() {
             <ProfileContentTabs
               soloPitches={mySoloPitches}
               duels={myDuels}
+              profileBrandId={brand.id}
               isLoggedIn
               viewerBrandId={brand.id}
               legacyVideoUrl={brand.videoUrl}

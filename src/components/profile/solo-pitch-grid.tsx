@@ -58,6 +58,7 @@ export function SoloPitchGrid({
           pitch={openPitch}
           isLoggedIn={isLoggedIn}
           viewerHasOtherBrand={Boolean(viewerBrandId && viewerBrandId !== openPitch.brandId)}
+          viewerBrandId={viewerBrandId}
           onClose={() => setOpenId(null)}
           onUpdated={(patch) =>
             setPitches((prev) => prev.map((p) => (p.soloPitchId === openPitch.soloPitchId ? { ...p, ...patch } : p)))
