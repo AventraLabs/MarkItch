@@ -1,27 +1,23 @@
 @import "tailwindcss";
 
+/* App ist bewusst fest dunkel (layout.tsx: <html class="dark">, <body
+   class="bg-black">) — kein Nutzer-Umschalter. Diese Datei hatte noch die
+   Next.js-Standardvorlage mit hell/dunkel je nach Systemeinstellung stehen;
+   bei hellem System-Modus gewann das gegen bg-black und blitzte an Rändern/
+   Übergängen weiß durch (gemeldet 2026-09-23, u. a. in der iOS-Simulator-
+   Hülle sichtbar). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #000000;
+  color: #ffffff;
   font-family: Arial, Helvetica, sans-serif;
 }
 
