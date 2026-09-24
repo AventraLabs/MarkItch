@@ -30,7 +30,13 @@ import { BrandProfileHeader } from "@/components/profile/brand-profile-header";
  */
 export default async function ProfilePage() {
   const sessionUser = await requireUser();
-  const [user] = await db.select().from(users).where(eq(users.id, sessionUser.id)).limit(1);
+  // Phase 42: brand lookup only needs the id already on hand from
+  // requireUser() — it doesn't depend on the user row, so it was a needless
+  // extra sequential round trip stacked in front of the page's real work.
+  const [[user], brand] = await Promise.all([
+    db.select().from(users).where(eq(users.id, sessionUser.id)).limit(1),
+    getBrandForUser(sessionUser.id),
+  ]);
 
   if (!user) {
     // Session refers to a user that no longer exists in the DB (e.g. a
@@ -39,8 +45,6 @@ export default async function ProfilePage() {
     // an actual way out rather than a dead end.
     redirect("/api/auth/signout?callbackUrl=%2Flogin");
   }
-
-  const brand = await getBrandForUser(sessionUser.id);
   const [mySoloPitches, myDuels, followerCount, followingCount, extras] = brand
     ? await Promise.all([
         getFeedSoloPitchesForBrand(sessionUser.id, brand.id),

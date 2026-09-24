@@ -32,9 +32,14 @@ export async function getBrandProfileExtras(
   viewerBrandId: string | null,
   isOwnBrand: boolean,
 ): Promise<BrandProfileExtras> {
-  const [activeCasting, livePending] = await Promise.all([
+  const period = currentPeriod();
+  // Phase 42: getChartForBrand doesn't depend on anything below — it was
+  // previously awaited on its own afterwards, adding a needless extra
+  // round trip to an already request-waterfall-heavy page.
+  const [activeCasting, livePending, { entries: chartEntries }] = await Promise.all([
     getActiveCastingForBrand(brand.id),
     viewerBrandId && !isOwnBrand ? getLivePendingChallengeBetween(viewerBrandId, brand.id) : Promise.resolve(null),
+    getChartForBrand(brand.id, period, null),
   ]);
   // Only bother looking up a finished casting's result if there's no
   // active one to show instead — a brand always has at most one relevant
@@ -45,9 +50,6 @@ export async function getBrandProfileExtras(
   const castingWinnerSubmission = winnerBrandId
     ? latestFinishedCasting?.submissions.find((s) => s.brandId === winnerBrandId)
     : null;
-
-  const period = currentPeriod();
-  const { entries: chartEntries } = await getChartForBrand(brand.id, period, null);
 
   return {
     category: brand.category,
