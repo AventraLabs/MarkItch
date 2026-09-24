@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { FeedDuelCard } from "@/components/feed/feed-duel-card";
 import { CommentSheet, type CommentTarget } from "@/components/feed/comment-sheet";
+import { BottomNav } from "@/components/nav/bottom-nav";
 import type { FeedDuel } from "@/lib/feed";
 
 /**
@@ -128,6 +129,11 @@ export function StandaloneDuelFeed({
           }
         />
       )}
+
+      {/* Phase 41: same fix as StandaloneSoloPitchView — this overlay's own
+          bg-black sat visually on top of the root layout's BottomNav even
+          though it was still mounted underneath. */}
+      <BottomNav isLoggedIn={isLoggedIn} />
     </div>
   );
 }

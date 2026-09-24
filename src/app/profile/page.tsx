@@ -8,6 +8,7 @@ import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { getFollowerCount, getFollowingCountForBrand } from "@/lib/follow";
 import { getFeedSoloPitchesForBrand, getFeedDuelsForBrand } from "@/lib/feed";
+import { getBrandProfileExtras } from "@/lib/brand-profile";
 import { CreateBrandForm } from "@/components/brand/create-brand-form";
 import { ProfileContentTabs } from "@/components/profile/profile-content-tabs";
 import { BrandProfileHeader } from "@/components/profile/brand-profile-header";
@@ -16,9 +17,16 @@ import { BrandProfileHeader } from "@/components/profile/brand-profile-header";
  * Phase 23: rebuilt to actually look like a profile tab (Instagram/TikTok
  * convention Luca asked for) — avatar, bio, follower/post counts, a grid
  * of what you've posted, and a gear icon into /profile/settings for
- * everything account-management-shaped (name/email, password, brand
- * video, casting status, invitations, legal). This page is the "what
- * anyone would see" view; settings is the "manage myself" view.
+ * everything account-management-shaped (name/email, password, casting
+ * status, invitations, legal). This page is the "what anyone would see"
+ * view; settings is the "manage myself" view.
+ *
+ * Phase 41: this page used to build its own, shorter version of "what
+ * anyone would see" — missing category/website/Creator-Charts/Partner-
+ * Casting entirely, so your own profile looked different from what a
+ * name-click on any of your videos opens (`/brands/[slug]`). Now shares
+ * getBrandProfileExtras and the same ProfileContentTabs (including its
+ * "Info" tab) with that page instead of a second, drifting copy.
  */
 export default async function ProfilePage() {
   const sessionUser = await requireUser();
@@ -33,12 +41,15 @@ export default async function ProfilePage() {
   }
 
   const brand = await getBrandForUser(sessionUser.id);
-  const [mySoloPitches, myDuels, followerCount, followingCount] = await Promise.all([
-    brand ? getFeedSoloPitchesForBrand(sessionUser.id, brand.id) : Promise.resolve([]),
-    brand ? getFeedDuelsForBrand(sessionUser.id, brand.id) : Promise.resolve([]),
-    brand ? getFollowerCount(brand.id) : Promise.resolve(0),
-    brand ? getFollowingCountForBrand(brand.id) : Promise.resolve(0),
-  ]);
+  const [mySoloPitches, myDuels, followerCount, followingCount, extras] = brand
+    ? await Promise.all([
+        getFeedSoloPitchesForBrand(sessionUser.id, brand.id),
+        getFeedDuelsForBrand(sessionUser.id, brand.id),
+        getFollowerCount(brand.id),
+        getFollowingCountForBrand(brand.id),
+        getBrandProfileExtras(brand, brand.id, true),
+      ])
+    : [[], [], 0, 0, null];
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-16">
@@ -49,7 +60,7 @@ export default async function ProfilePage() {
         </Link>
       </div>
 
-      {brand ? (
+      {brand && extras ? (
         <>
           <BrandProfileHeader
             name={brand.name}
@@ -62,16 +73,26 @@ export default async function ProfilePage() {
             followingHref={`/brands/${brand.slug}/following`}
           />
 
-          {mySoloPitches.length + myDuels.length > 0 ? (
-            <ProfileContentTabs soloPitches={mySoloPitches} duels={myDuels} profileBrandId={brand.id} isLoggedIn viewerBrandId={brand.id} />
-          ) : (
-            <div className="rounded-2xl border border-zinc-800 py-12 text-center">
-              <p className="mb-2 text-sm text-zinc-500">Noch nichts gepostet.</p>
-              <Link href="/post" className="text-sm font-semibold text-orange-500 hover:underline">
-                + Jetzt posten
-              </Link>
-            </div>
-          )}
+          <ProfileContentTabs
+            soloPitches={mySoloPitches}
+            duels={myDuels}
+            profileBrandId={brand.id}
+            isLoggedIn
+            viewerBrandId={brand.id}
+            info={{
+              category: extras.category,
+              country: extras.country,
+              website: extras.website,
+              brandSlug: brand.slug,
+              period: extras.period,
+              periodLabel: extras.periodLabel,
+              chartCount: extras.chartEntries.length,
+              isOwnBrand: true,
+              activeCasting: extras.activeCasting,
+              castingWinner: extras.castingWinner,
+              latestFinishedCastingId: extras.latestFinishedCastingId,
+            }}
+          />
         </>
       ) : user.accountType === "acro" ? (
         <div>

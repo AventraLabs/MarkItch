@@ -2,30 +2,20 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { brands } from "@/db/schema";
-import Link from "next/link";
 import { ChallengeButton } from "@/components/challenge/challenge-button";
 import { FollowButton } from "@/components/brand/follow-button";
 import { BrandProfileHeader } from "@/components/profile/brand-profile-header";
 import { ProfileContentTabs } from "@/components/profile/profile-content-tabs";
 import { getOptionalUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
-import { getLivePendingChallengeBetween } from "@/lib/challenge";
+import { getBrandProfileExtras } from "@/lib/brand-profile";
 import { getFollowerCount, getFollowingCountForBrand, isFollowing } from "@/lib/follow";
-import { getActiveCastingForBrand, getLatestFinishedCastingForBrand } from "@/lib/casting";
-import { currentPeriod, periodLabel, getChartForBrand } from "@/lib/creator-charts";
 import { getFeedSoloPitchesForBrand, getFeedDuelsForBrand } from "@/lib/feed";
 
 // Note: this page already reads the session (getOptionalUser -> auth(),
 // which touches cookies), so Next treats it as dynamic automatically —
 // unlike /brands and /pitches, no explicit `dynamic = "force-dynamic"`
 // is needed here.
-
-const COUNTRY_LABELS: Record<string, string> = {
-  AT: "Österreich",
-  DE: "Deutschland",
-  CH: "Schweiz",
-  Other: "Andere",
-};
 
 export default async function BrandProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -36,34 +26,22 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
   const viewer = await getOptionalUser();
   const viewerBrand = viewer ? await getBrandForUser(viewer.id) : null;
   const isOwnBrand = viewerBrand?.id === brand.id;
-  const [soloPitches, duels, livePending, followerCount, followingCount, viewerFollows, activeCasting] = await Promise.all([
+  const [soloPitches, duels, followerCount, followingCount, viewerFollows, extras] = await Promise.all([
     getFeedSoloPitchesForBrand(viewer?.id ?? null, brand.id),
     getFeedDuelsForBrand(viewer?.id ?? null, brand.id),
-    viewerBrand && !isOwnBrand ? getLivePendingChallengeBetween(viewerBrand.id, brand.id) : null,
     getFollowerCount(brand.id),
     getFollowingCountForBrand(brand.id),
-    viewer && !isOwnBrand ? isFollowing(viewer.id, brand.id) : false,
-    getActiveCastingForBrand(brand.id),
+    viewer && !isOwnBrand ? isFollowing(viewer.id, brand.id) : Promise.resolve(false),
+    getBrandProfileExtras(brand, viewerBrand?.id ?? null, isOwnBrand),
   ]);
-  // Only bother looking up a finished casting's result if there's no
-  // active one to show instead — a brand always has at most one relevant
-  // casting to display at a time.
-  const latestFinishedCasting = activeCasting ? null : await getLatestFinishedCastingForBrand(brand.id);
-  const finishedStage = latestFinishedCasting?.stage;
-  const winnerBrandId = finishedStage?.stage === "finished" ? finishedStage.winnerBrandId : null;
-  const castingWinner = winnerBrandId
-    ? latestFinishedCasting?.submissions.find((s) => s.brandId === winnerBrandId)
-    : null;
-
-  const period = currentPeriod();
-  const { entries: chartEntries } = await getChartForBrand(brand.id, period, null);
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-16">
-      {/* Phase 32: identical layout to /profile (Luca: "das Profil bei jedem
-          müsste so aussehen wie der Tab Profil") — this used to be a
-          completely different, lesser page that never even showed this
-          brand's actual posts. */}
+      {/* Phase 32/41: identical layout to /profile (Luca: "der Screen auf Tab
+          Profil muss der selbe sein wie der Screen wenn jemand auf meinen
+          Namen klickt") — both pages now share getBrandProfileExtras and
+          this same set of components instead of keeping two copies that
+          can silently drift apart again. */}
       <BrandProfileHeader
         name={brand.name}
         logoUrl={brand.logoUrl}
@@ -73,91 +51,45 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
         followingCount={followingCount}
         followersHref={`/brands/${brand.slug}/followers`}
         followingHref={`/brands/${brand.slug}/following`}
-        action={viewer && !isOwnBrand ? <FollowButton brandId={brand.id} isFollowing={viewerFollows} /> : undefined}
+        action={
+          viewer && !isOwnBrand ? (
+            <div className="flex flex-col items-center gap-3">
+              <FollowButton brandId={brand.id} isFollowing={viewerFollows} />
+              {viewerBrand &&
+                (extras.livePending ? (
+                  <p className="text-center text-sm text-zinc-400">
+                    {extras.livePending.challengerBrandId === viewerBrand.id
+                      ? "Du hast diese Marke bereits eingeladen — Antwort steht noch aus."
+                      : "Diese Marke hat dich bereits eingeladen — schau in deinem Profil vorbei."}
+                  </p>
+                ) : (
+                  <ChallengeButton challengedBrandId={brand.id} />
+                ))}
+            </div>
+          ) : undefined
+        }
       />
 
-      {soloPitches.length + duels.length > 0 ? (
-        <ProfileContentTabs
-          soloPitches={soloPitches}
-          duels={duels}
-          profileBrandId={brand.id}
-          isLoggedIn={Boolean(viewer)}
-          viewerBrandId={viewerBrand?.id ?? null}
-        />
-      ) : (
-        <div className="rounded-2xl border border-zinc-800 py-12 text-center">
-          <p className="text-sm text-zinc-500">Noch nichts gepostet.</p>
-        </div>
-      )}
-
-      <div className="mt-8 space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
-        <div className="flex gap-2 text-xs">
-          <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-medium text-orange-400">{brand.category}</span>
-          <span className="rounded-full bg-zinc-800 px-2 py-0.5 font-medium text-zinc-400">
-            {COUNTRY_LABELS[brand.country] ?? brand.country}
-          </span>
-        </div>
-
-        {brand.website && (
-          <a href={brand.website} target="_blank" rel="noopener noreferrer" className="block text-sm text-orange-500 hover:underline">
-            {brand.website} ↗
-          </a>
-        )}
-
-
-        <div className="rounded-lg border border-zinc-800 p-4 text-center">
-          <p className="mb-2 text-sm text-zinc-300">
-            🎥 Creator-Charts — {periodLabel(period)}
-            {chartEntries.length > 0 ? ` (${chartEntries.length})` : ""}
-          </p>
-          <Link
-            href={`/brands/${brand.slug}/charts/${period}`}
-            className="text-sm font-semibold text-orange-400 hover:underline"
-          >
-            {chartEntries.length > 0 ? "Ansehen & abstimmen" : "Noch keine Videos — erstes posten"} →
-          </Link>
-        </div>
-
-        {activeCasting && (
-          <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 text-center">
-            <p className="mb-2 text-sm text-orange-300">🎬 Partner-Casting läuft (neuer Partner gesucht): „{activeCasting.prompt}“</p>
-            <Link href={`/castings/${activeCasting.id}`} className="text-sm font-semibold text-orange-400 hover:underline">
-              {isOwnBrand ? "Ansehen" : "Ansehen & mitmachen"} →
-            </Link>
-          </div>
-        )}
-
-        {!activeCasting && castingWinner && latestFinishedCasting && (
-          <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 text-center">
-            <p className="text-sm text-orange-300">
-              🏆 Offizieller Partner:{" "}
-              <Link href={`/brands/${castingWinner.brandSlug}`} className="font-semibold hover:underline">
-                {castingWinner.brandName}
-              </Link>
-            </p>
-            <Link
-              href={`/castings/${latestFinishedCasting.id}`}
-              className="mt-1 inline-block text-xs text-orange-400/80 hover:underline"
-            >
-              Casting ansehen →
-            </Link>
-          </div>
-        )}
-
-        {viewerBrand && !isOwnBrand && (
-          <>
-            {livePending ? (
-              <p className="text-center text-sm text-zinc-400">
-                {livePending.challengerBrandId === viewerBrand.id
-                  ? "Du hast diese Marke bereits eingeladen — Antwort steht noch aus."
-                  : "Diese Marke hat dich bereits eingeladen — schau in deinem Profil vorbei."}
-              </p>
-            ) : (
-              <ChallengeButton challengedBrandId={brand.id} />
-            )}
-          </>
-        )}
-      </div>
+      <ProfileContentTabs
+        soloPitches={soloPitches}
+        duels={duels}
+        profileBrandId={brand.id}
+        isLoggedIn={Boolean(viewer)}
+        viewerBrandId={viewerBrand?.id ?? null}
+        info={{
+          category: extras.category,
+          country: extras.country,
+          website: extras.website,
+          brandSlug: brand.slug,
+          period: extras.period,
+          periodLabel: extras.periodLabel,
+          chartCount: extras.chartEntries.length,
+          isOwnBrand,
+          activeCasting: extras.activeCasting,
+          castingWinner: extras.castingWinner,
+          latestFinishedCastingId: extras.latestFinishedCastingId,
+        }}
+      />
     </div>
   );
 }

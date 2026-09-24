@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FeedSoloPitchCard } from "@/components/feed/feed-solo-pitch-card";
 import { CommentSheet, type CommentTarget } from "@/components/feed/comment-sheet";
 import { ReactionsOverlay } from "@/components/pitches/reactions-overlay";
+import { BottomNav } from "@/components/nav/bottom-nav";
 import type { FeedSoloPitch } from "@/lib/feed";
 
 /**
@@ -103,6 +104,15 @@ export function StandaloneSoloPitchView({
           onReactionCountChange={(_id, count) => patch({ reactionCount: count })}
         />
       )}
+
+      {/* Phase 41: this overlay's own bg-black at z-50 sat visually on top
+          of the root layout's BottomNav (z-20, same fixed viewport) even
+          though it was still mounted — Luca: "wenn ich ein Video ansehe
+          sind unten alle Tabs weg." Main feed keeps the nav visible while
+          showing the exact same full-screen card; this should behave the
+          same way instead of feeling like a dead end with no way out but
+          the close button. */}
+      <BottomNav isLoggedIn={isLoggedIn} />
     </div>
   );
 }

@@ -63,17 +63,28 @@ export async function postSoloPitch(_prevState: SoloPitchFormState, formData: Fo
     return { errors: cta.errors };
   }
 
-  await db.insert(soloPitches).values({
-    brandId: myBrand.id,
-    videoUrl: video.videoUrl,
-    category: PITCH_CATEGORY,
-    description: description.description,
-    ctaLabel: cta.ctaLabel,
-    ctaUrl: cta.ctaUrl,
-  });
+  const [pitch] = await db
+    .insert(soloPitches)
+    .values({
+      brandId: myBrand.id,
+      videoUrl: video.videoUrl,
+      category: PITCH_CATEGORY,
+      description: description.description,
+      ctaLabel: cta.ctaLabel,
+      ctaUrl: cta.ctaUrl,
+    })
+    .returning({ id: soloPitches.id });
 
   refresh();
-  redirect("/?posted=1");
+  // Phase 41: `posted=1` alone reset the scroll position but didn't
+  // guarantee the just-posted video was the first thing there — the feed's
+  // interleave cadence (see feed.ts's SOLO_INTERLEAVE_EVERY) places even
+  // the newest solo pitch at the first *solo* slot, which is the 3rd item
+  // overall, not the 1st. Luca: "es ist das letzte gepostete, müsste im
+  // Feed sein." Passing its id reuses the existing share-link deep-link
+  // mechanism (page.tsx) to pin it to the very top for the poster, without
+  // changing how the feed ranks for anyone else.
+  redirect(`/?posted=1&pitch=${pitch.id}`);
 }
 
 export type UpdateSoloPitchFormState = { errors?: Record<string, string[]>; success?: boolean } | undefined;

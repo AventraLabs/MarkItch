@@ -1,9 +1,31 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { SoloPitchGrid } from "@/components/profile/solo-pitch-grid";
 import { DuelGrid } from "@/components/profile/duel-grid";
 import type { FeedSoloPitch, FeedDuel } from "@/lib/feed";
+
+const COUNTRY_LABELS: Record<string, string> = {
+  AT: "Österreich",
+  DE: "Deutschland",
+  CH: "Schweiz",
+  Other: "Andere",
+};
+
+export type ProfileInfo = {
+  category: string;
+  country: string;
+  website: string | null;
+  brandSlug: string;
+  period: string;
+  periodLabel: string;
+  chartCount: number;
+  isOwnBrand: boolean;
+  activeCasting: { id: string; prompt: string } | null;
+  castingWinner: { brandName: string; brandSlug: string } | null;
+  latestFinishedCastingId: string | null;
+};
 
 /**
  * Phase 38: Luca's report — a profile only ever showed Solo-Pitches, never
@@ -17,6 +39,14 @@ import type { FeedSoloPitch, FeedDuel } from "@/lib/feed";
  * Luca: "das braucht keiner... es soll im Profil unter Videos einfach die
  * ganzen Solo-Pitch-Videos sein." The whole concept (settings upload form,
  * the counter-invite fallback) is retired, not just its display here.
+ *
+ * Phase 41: category/website/Creator-Charts/Partner-Casting used to sit in
+ * a block below this whole component, after however many rows a brand's
+ * grid takes — Luca: with ~100 posts nobody scrolls past the entire grid to
+ * find it. Now a third tab, reachable with one tap regardless of grid
+ * size. `info` is optional so a profile with nothing to show there (no
+ * chart/casting/website yet — shouldn't happen in practice, `brand.category`
+ * is required) can simply omit the tab.
  */
 export function ProfileContentTabs({
   soloPitches,
@@ -24,14 +54,16 @@ export function ProfileContentTabs({
   profileBrandId,
   isLoggedIn,
   viewerBrandId,
+  info,
 }: {
   soloPitches: FeedSoloPitch[];
   duels: FeedDuel[];
   profileBrandId: string;
   isLoggedIn: boolean;
   viewerBrandId?: string | null;
+  info: ProfileInfo;
 }) {
-  const [tab, setTab] = useState<"solo" | "duels">("solo");
+  const [tab, setTab] = useState<"solo" | "duels" | "info">("solo");
 
   return (
     <div>
@@ -48,6 +80,12 @@ export function ProfileContentTabs({
         >
           Duelle ({duels.length})
         </button>
+        <button
+          onClick={() => setTab("info")}
+          className={`flex-1 border-b-2 py-2.5 ${tab === "info" ? "border-orange-500 text-white" : "border-transparent text-zinc-500"}`}
+        >
+          Info
+        </button>
       </div>
 
       {tab === "solo" ? (
@@ -56,10 +94,60 @@ export function ProfileContentTabs({
         ) : (
           <p className="py-8 text-center text-sm text-zinc-500">Noch keine Videos gepostet.</p>
         )
-      ) : duels.length > 0 ? (
-        <DuelGrid duels={duels} isLoggedIn={isLoggedIn} ownBrandId={profileBrandId} />
+      ) : tab === "duels" ? (
+        duels.length > 0 ? (
+          <DuelGrid duels={duels} isLoggedIn={isLoggedIn} ownBrandId={profileBrandId} />
+        ) : (
+          <p className="py-8 text-center text-sm text-zinc-500">Noch keine Duelle.</p>
+        )
       ) : (
-        <p className="py-8 text-center text-sm text-zinc-500">Noch keine Duelle.</p>
+        <div className="space-y-4">
+          <div className="flex gap-2 text-xs">
+            <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-medium text-orange-400">{info.category}</span>
+            <span className="rounded-full bg-zinc-800 px-2 py-0.5 font-medium text-zinc-400">
+              {COUNTRY_LABELS[info.country] ?? info.country}
+            </span>
+          </div>
+
+          {info.website && (
+            <a href={info.website} target="_blank" rel="noopener noreferrer" className="block text-sm text-orange-500 hover:underline">
+              {info.website} ↗
+            </a>
+          )}
+
+          <div className="rounded-lg border border-zinc-800 p-4 text-center">
+            <p className="mb-2 text-sm text-zinc-300">
+              🎥 Creator-Charts — {info.periodLabel}
+              {info.chartCount > 0 ? ` (${info.chartCount})` : ""}
+            </p>
+            <Link href={`/brands/${info.brandSlug}/charts/${info.period}`} className="text-sm font-semibold text-orange-400 hover:underline">
+              {info.chartCount > 0 ? "Ansehen & abstimmen" : "Noch keine Videos — erstes posten"} →
+            </Link>
+          </div>
+
+          {info.activeCasting && (
+            <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 text-center">
+              <p className="mb-2 text-sm text-orange-300">🎬 Partner-Casting läuft (neuer Partner gesucht): „{info.activeCasting.prompt}“</p>
+              <Link href={`/castings/${info.activeCasting.id}`} className="text-sm font-semibold text-orange-400 hover:underline">
+                {info.isOwnBrand ? "Ansehen" : "Ansehen & mitmachen"} →
+              </Link>
+            </div>
+          )}
+
+          {!info.activeCasting && info.castingWinner && info.latestFinishedCastingId && (
+            <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 text-center">
+              <p className="text-sm text-orange-300">
+                🏆 Offizieller Partner:{" "}
+                <Link href={`/brands/${info.castingWinner.brandSlug}`} className="font-semibold hover:underline">
+                  {info.castingWinner.brandName}
+                </Link>
+              </p>
+              <Link href={`/castings/${info.latestFinishedCastingId}`} className="mt-1 inline-block text-xs text-orange-400/80 hover:underline">
+                Casting ansehen →
+              </Link>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
