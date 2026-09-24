@@ -22,7 +22,15 @@ type CommentRow = Omit<CommentWithAuthor, "createdAt"> & { createdAt: string };
 // and the id so this component (and its one caller-visible id, used for
 // onCommentPosted) stays a single source of truth instead of two near-
 // identical components.
-export type CommentTarget = { kind: "battle"; id: string } | { kind: "solo"; id: string };
+// Phase 40: reactions got the same comment thread — "like/comment/teilen/
+// melden sollen überall gleich sein" (Luca).
+export type CommentTarget = { kind: "battle"; id: string } | { kind: "solo"; id: string } | { kind: "reaction"; id: string };
+
+const ENDPOINT_BY_KIND: Record<CommentTarget["kind"], { endpoint: string; idParam: string }> = {
+  battle: { endpoint: "/api/feed/comments", idParam: "battleId" },
+  solo: { endpoint: "/api/pitches/comments", idParam: "soloPitchId" },
+  reaction: { endpoint: "/api/pitches/reaction-comments", idParam: "reactionId" },
+};
 
 export function CommentSheet({
   target,
@@ -40,8 +48,7 @@ export function CommentSheet({
   const [error, setError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
 
-  const endpoint = target.kind === "battle" ? "/api/feed/comments" : "/api/pitches/comments";
-  const idParam = target.kind === "battle" ? "battleId" : "soloPitchId";
+  const { endpoint, idParam } = ENDPOINT_BY_KIND[target.kind];
 
   useEffect(() => {
     let cancelled = false;

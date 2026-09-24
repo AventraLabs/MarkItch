@@ -24,6 +24,8 @@ export function ReactionsFeed({
   onToggleMute,
   onToggleLike,
   onReply,
+  onOpenComments,
+  onShare,
   startIndex,
   onClose,
   onBackToGrid,
@@ -36,6 +38,8 @@ export function ReactionsFeed({
   onToggleMute: () => void;
   onToggleLike: (reactionId: string) => void;
   onReply: (reactionId: string) => void;
+  onOpenComments: (reactionId: string) => void;
+  onShare: (reaction: ReactionRow) => void;
   startIndex: number;
   onClose: () => void;
   onBackToGrid: () => void;
@@ -84,6 +88,8 @@ export function ReactionsFeed({
             onToggleMute={onToggleMute}
             onToggleLike={onToggleLike}
             onReply={onReply}
+            onOpenComments={onOpenComments}
+            onShare={onShare}
           />
         ))}
       </div>

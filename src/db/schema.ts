@@ -312,6 +312,12 @@ export const comments = pgTable("comments", {
   id: uuid("id").primaryKey().defaultRandom(),
   battleId: uuid("battle_id").references(() => battles.id, { onDelete: "cascade" }),
   soloPitchId: uuid("solo_pitch_id").references(() => soloPitches.id, { onDelete: "cascade" }),
+  // Phase 40: reactions used to be the one card type with no comment
+  // thread at all ("discussion stays on the pitch itself") — Luca:
+  // like/comment/teilen/melden should be the same four buttons everywhere,
+  // no reason reactions are the odd one out. Exactly one of battleId/
+  // soloPitchId/reactionId is ever set, same convention as `likes`.
+  reactionId: uuid("reaction_id").references((): AnyPgColumn => reactions.id, { onDelete: "cascade" }),
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),

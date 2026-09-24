@@ -5,6 +5,7 @@ import { reactions, brands, likes, battles, soloPitches, type Reaction } from "@
 import { getExistingOpenBattle } from "@/lib/battle";
 import { activateBattleIfBothSidesReady } from "@/lib/battle-stage";
 import { PITCH_CATEGORY } from "@/lib/battle-format";
+import { getCommentCountsForReactions } from "@/lib/comment";
 
 export type ReactionBrand = { id: string; name: string; slug: string; logoUrl: string | null };
 
@@ -12,6 +13,7 @@ export type ReactionWithBrand = Reaction & {
   brand: ReactionBrand;
   likeCount: number;
   viewerLiked: boolean;
+  commentCount: number;
 };
 
 const brandCols = { id: brands.id, name: brands.name, slug: brands.slug, logoUrl: brands.logoUrl };
@@ -27,7 +29,7 @@ export async function getReactionsForSoloPitch(soloPitchId: string, viewerId: st
   if (rows.length === 0) return [];
 
   const reactionIds = rows.map((r) => r.reaction.id);
-  const [likeCountRows, viewerLikedRows] = await Promise.all([
+  const [likeCountRows, viewerLikedRows, commentCountById] = await Promise.all([
     db
       .select({ reactionId: likes.reactionId, n: count() })
       .from(likes)
@@ -39,6 +41,7 @@ export async function getReactionsForSoloPitch(soloPitchId: string, viewerId: st
           .from(likes)
           .where(and(eq(likes.userId, viewerId), inArray(likes.reactionId, reactionIds)))
       : Promise.resolve([]),
+    getCommentCountsForReactions(reactionIds),
   ]);
   const likeCountById = new Map(likeCountRows.map((r) => [r.reactionId, r.n]));
   const viewerLikedSet = new Set(viewerLikedRows.map((r) => r.reactionId));
@@ -49,6 +52,7 @@ export async function getReactionsForSoloPitch(soloPitchId: string, viewerId: st
       brand: r.brand,
       likeCount: likeCountById.get(r.reaction.id) ?? 0,
       viewerLiked: viewerLikedSet.has(r.reaction.id),
+      commentCount: commentCountById.get(r.reaction.id) ?? 0,
     }))
     .sort((a, b) => b.likeCount - a.likeCount || a.createdAt.getTime() - b.createdAt.getTime());
 }

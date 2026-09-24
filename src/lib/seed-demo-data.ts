@@ -139,12 +139,31 @@ const SOLO_PITCH_SEEDS: { brandSlug: string; createdDaysAgo: number }[] = [
   { brandSlug: "glowbotanic", createdDaysAgo: 6 },
 ];
 
-const REACTION_SEEDS: { soloPitchBrandSlug: string; reactorSlug: string; createdDaysAgo: number; promote?: boolean }[] = [
-  { soloPitchBrandSlug: "sprintex", reactorSlug: "velocia", createdDaysAgo: 3 },
+const REACTION_SEEDS: {
+  key?: string; // lets a later seed's `replyTo` reference this one's inserted id
+  soloPitchBrandSlug: string;
+  reactorSlug: string;
+  createdDaysAgo: number;
+  promote?: boolean;
+  replyTo?: string;
+}[] = [
+  { key: "sprintex-velocia", soloPitchBrandSlug: "sprintex", reactorSlug: "velocia", createdDaysAgo: 3 },
   // The better-liked reaction is the one that gets "hochgestuft" below —
   // matches the product logic (best-liked = most promotion-worthy).
   { soloPitchBrandSlug: "sprintex", reactorSlug: "nordwear", createdDaysAgo: 2, promote: true },
   { soloPitchBrandSlug: "questforge", reactorSlug: "pixelrealm", createdDaysAgo: 1 },
+  // Phase 40: a real back-and-forth chain to test the new reply-to-a-
+  // reaction feature with ("Coke vs. Pepsi", Luca's own example) — the
+  // pitch's own brand replies into the thread, then the original reactor
+  // replies again.
+  {
+    key: "sprintex-velocia-reply1",
+    soloPitchBrandSlug: "sprintex",
+    reactorSlug: "sprintex",
+    createdDaysAgo: 2.5,
+    replyTo: "sprintex-velocia",
+  },
+  { soloPitchBrandSlug: "sprintex", reactorSlug: "velocia", createdDaysAgo: 2.2, replyTo: "sprintex-velocia-reply1" },
 ];
 
 const PENDING_PITCH_CHALLENGE = { soloPitchBrandSlug: "glowbotanic", challengerSlug: "luxora" };
@@ -223,8 +242,6 @@ export async function seedDemoContent(db: Db): Promise<SeedDemoResult> {
         website: `https://${b.slug}.example`,
         category: b.category,
         country: b.country,
-        videoUrl: videoUrl(b.slug),
-        videoUploadedAt: daysAgo(40),
       })
       .returning({ id: brands.id });
 
@@ -351,20 +368,24 @@ export async function seedDemoContent(db: Db): Promise<SeedDemoResult> {
     }
   }
 
+  const reactionIdByKey = new Map<string, string>();
   for (const seed of REACTION_SEEDS) {
     const soloPitchId = soloPitchIdBySlug.get(seed.soloPitchBrandSlug);
     const reactorBrandId = brandIdBySlug.get(seed.reactorSlug);
     if (!soloPitchId || !reactorBrandId) continue;
+    const parentReactionId = seed.replyTo ? (reactionIdByKey.get(seed.replyTo) ?? null) : null;
 
     const [reaction] = await db
       .insert(reactions)
       .values({
         soloPitchId,
         brandId: reactorBrandId,
+        parentReactionId,
         videoUrl: videoUrl(seed.reactorSlug),
         createdAt: daysAgo(seed.createdDaysAgo),
       })
       .returning({ id: reactions.id });
+    if (seed.key) reactionIdByKey.set(seed.key, reaction.id);
 
     // The promoted reaction gets more likes than the other(s) on the same
     // pitch, so "sortiert nach Likes" visibly picks it as the best answer.

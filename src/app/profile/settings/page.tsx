@@ -11,8 +11,6 @@ import { ResendVerificationButton } from "@/components/auth/resend-verification-
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
 import { EditProfileForm } from "@/components/auth/edit-profile-form";
 import { DeleteAccountForm } from "@/components/auth/delete-account-form";
-import { VideoUploadForm } from "@/components/brand/video-upload-form";
-import { VideoPlayer } from "@/components/brand/video-player";
 import { IncomingChallengeList, OutgoingChallengeList } from "@/components/challenge/challenge-list";
 import { getIncomingChallenges, getOutgoingChallenges } from "@/lib/challenge";
 import { getActiveCastingForBrand, getWonCastingsForBrand } from "@/lib/casting";
@@ -72,18 +70,6 @@ export default async function ProfileSettingsPage() {
           </div>
         )}
       </div>
-
-      {brand && (
-        <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">Marken-Video</h2>
-          {brand.videoUrl && (
-            <div className="mb-4 max-w-[200px]">
-              <VideoPlayer src={brand.videoUrl} />
-            </div>
-          )}
-          <VideoUploadForm hasVideo={Boolean(brand.videoUrl)} />
-        </div>
-      )}
 
       {brand && (
         <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">

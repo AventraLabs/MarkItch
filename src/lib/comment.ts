@@ -78,3 +78,36 @@ export async function getCommentCountsForSoloPitches(soloPitchIds: string[]): Pr
     .groupBy(comments.soloPitchId);
   return new Map(rows.map((row) => [row.soloPitchId as string, row.n]));
 }
+
+/** Phase 40: same as getCommentsForSoloPitch, keyed on a reaction instead — reactions get the same like/comment/share/report set as everywhere else. */
+export async function getCommentsForReaction(reactionId: string): Promise<CommentWithAuthor[]> {
+  const rows = await db
+    .select({
+      id: comments.id,
+      content: comments.content,
+      createdAt: comments.createdAt,
+      name: users.name,
+      email: users.email,
+    })
+    .from(comments)
+    .innerJoin(users, eq(comments.userId, users.id))
+    .where(eq(comments.reactionId, reactionId))
+    .orderBy(desc(comments.createdAt));
+
+  return rows.map((row) => ({
+    id: row.id,
+    content: row.content,
+    createdAt: row.createdAt,
+    authorName: row.name || row.email.split("@")[0],
+  }));
+}
+
+export async function getCommentCountsForReactions(reactionIds: string[]): Promise<Map<string, number>> {
+  if (reactionIds.length === 0) return new Map();
+  const rows = await db
+    .select({ reactionId: comments.reactionId, n: count() })
+    .from(comments)
+    .where(inArray(comments.reactionId, reactionIds))
+    .groupBy(comments.reactionId);
+  return new Map(rows.map((row) => [row.reactionId as string, row.n]));
+}

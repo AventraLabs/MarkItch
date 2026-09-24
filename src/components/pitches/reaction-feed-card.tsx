@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Heart, MessageSquareShare, Play, Volume2, VolumeX } from "lucide-react";
+import { Heart, MessageCircle, MessageSquareShare, Play, Share2, Volume2, VolumeX } from "lucide-react";
 import { PromoteReactionButton } from "@/components/pitches/promote-reaction-button";
 import { ReportButton } from "@/components/moderation/report-button";
 import type { ReactionRow } from "@/lib/reaction-threads";
@@ -11,15 +11,16 @@ import type { ReactionRow } from "@/lib/reaction-threads";
  * Phase 34: one reaction, full-screen — same visual language as
  * FeedSoloPitchCard (tap to pause, mute only shown while paused) instead of
  * a cramped list-item video. Luca: "wie bei TikTok... man soll da auch
- * normal liken... können." Comments are deliberately not here — reactions
- * never got their own comment thread (see schema.ts's comment on
- * `comments`, "discussion stays on the pitch itself"), a real schema
- * addition if that's wanted later, not part of this pass.
+ * normal liken... können."
  *
  * Phase 40: `canReply` + `onReply` — a reaction can now itself be replied
  * to, chaining two brands back and forth ("Coke vs. Pepsi"). A reply shows
  * an "Antwort im Thread" badge instead of "Reaktion" so the chain reads
- * clearly while scrolling through it.
+ * clearly while scrolling through it. Comments + Share were also added
+ * here (previously the only card type without them) — Luca: "like/comment/
+ * teilen/melden sollen überall gleich sein", same icon set/order as
+ * FeedSoloPitchCard, with "Antworten" (the video-reply/chain action) as
+ * the one addition unique to reactions.
  */
 export function ReactionFeedCard({
   reaction,
@@ -30,6 +31,8 @@ export function ReactionFeedCard({
   onToggleMute,
   onToggleLike,
   onReply,
+  onOpenComments,
+  onShare,
 }: {
   reaction: ReactionRow;
   isLoggedIn: boolean;
@@ -39,6 +42,8 @@ export function ReactionFeedCard({
   onToggleMute: () => void;
   onToggleLike: (reactionId: string) => void;
   onReply: (reactionId: string) => void;
+  onOpenComments: (reactionId: string) => void;
+  onShare: (reaction: ReactionRow) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -151,12 +156,22 @@ export function ReactionFeedCard({
           <span className="text-xs font-medium">{reaction.likeCount}</span>
         </button>
 
+        <button onClick={() => onOpenComments(reaction.id)} className="pointer-events-auto flex flex-col items-center gap-1 text-white">
+          <MessageCircle size={28} />
+          <span className="text-xs font-medium">{reaction.commentCount}</span>
+        </button>
+
         {canReply && (
           <button onClick={() => onReply(reaction.id)} className="pointer-events-auto flex flex-col items-center gap-1 text-white" aria-label="Antworten">
             <MessageSquareShare size={28} />
             <span className="text-xs font-medium">Antworten</span>
           </button>
         )}
+
+        <button onClick={() => onShare(reaction)} className="pointer-events-auto flex flex-col items-center gap-1 text-white">
+          <Share2 size={26} />
+          <span className="text-xs font-medium">Teilen</span>
+        </button>
 
         <ReportButton targetType="reaction" targetId={reaction.id} isLoggedIn={isLoggedIn} />
       </div>

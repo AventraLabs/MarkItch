@@ -76,14 +76,13 @@ export default async function BrandProfilePage({ params }: { params: Promise<{ s
         action={viewer && !isOwnBrand ? <FollowButton brandId={brand.id} isFollowing={viewerFollows} /> : undefined}
       />
 
-      {soloPitches.length + duels.length > 0 || brand.videoUrl ? (
+      {soloPitches.length + duels.length > 0 ? (
         <ProfileContentTabs
           soloPitches={soloPitches}
           duels={duels}
           profileBrandId={brand.id}
           isLoggedIn={Boolean(viewer)}
           viewerBrandId={viewerBrand?.id ?? null}
-          legacyVideoUrl={brand.videoUrl}
         />
       ) : (
         <div className="rounded-2xl border border-zinc-800 py-12 text-center">

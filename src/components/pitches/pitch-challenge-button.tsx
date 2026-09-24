@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { Swords } from "lucide-react";
+import { Send } from "lucide-react";
 import { sendChallengeFromSoloPitch, type ChallengeFormState } from "@/app/actions/challenge";
 import { FormError, SubmitButton } from "@/components/ui";
 
@@ -20,7 +20,7 @@ export function PitchChallengeButton({ soloPitchId }: { soloPitchId: string }) {
       <input type="hidden" name="soloPitchId" value={soloPitchId} />
       <FormError message={state?.error} />
       <SubmitButton>
-        <Swords size={14} className="inline -mt-0.5 mr-1" /> Duell einladen
+        <Send size={14} className="inline -mt-0.5 mr-1" /> Duell einladen
       </SubmitButton>
     </form>
   );
