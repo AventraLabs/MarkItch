@@ -528,6 +528,15 @@ export const brandAnalyticsEvents = pgTable(
       .notNull()
       .references(() => brands.id, { onDelete: "cascade" }),
     kind: text("kind").notNull(), // 'view' | 'share'
+    // Phase 41: a view was only ever counted per-brand (for the dashboard's
+    // aggregate stat) — Luca wanted a visible per-video count like TikTok/
+    // Insta show, which needs to know *which* pitch/battle a view was for,
+    // not just which brand. Both nullable and additive: existing brand-level
+    // aggregation (getEventCount) is untouched, this just also tags the
+    // same event with whichever piece of content it was for, when there is
+    // one (a solo pitch's or a battle side's view — never both).
+    soloPitchId: uuid("solo_pitch_id").references(() => soloPitches.id, { onDelete: "cascade" }),
+    battleId: uuid("battle_id").references(() => battles.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("brand_analytics_events_brand_kind_idx").on(table.brandId, table.kind)],

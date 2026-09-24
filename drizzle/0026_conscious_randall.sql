@@ -1,0 +1,4 @@
+ALTER TABLE "brand_analytics_events" ADD COLUMN "solo_pitch_id" uuid;--> statement-breakpoint
+ALTER TABLE "brand_analytics_events" ADD COLUMN "battle_id" uuid;--> statement-breakpoint
+ALTER TABLE "brand_analytics_events" ADD CONSTRAINT "brand_analytics_events_solo_pitch_id_solo_pitches_id_fk" FOREIGN KEY ("solo_pitch_id") REFERENCES "public"."solo_pitches"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "brand_analytics_events" ADD CONSTRAINT "brand_analytics_events_battle_id_battles_id_fk" FOREIGN KEY ("battle_id") REFERENCES "public"."battles"("id") ON DELETE cascade ON UPDATE no action;

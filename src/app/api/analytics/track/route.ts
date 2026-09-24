@@ -15,6 +15,8 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   const brandId = body?.brandId;
   const kind = body?.kind;
+  const soloPitchId = typeof body?.soloPitchId === "string" ? body.soloPitchId : undefined;
+  const battleId = typeof body?.battleId === "string" ? body.battleId : undefined;
   if (typeof brandId !== "string" || !brandId || (kind !== "view" && kind !== "share")) {
     return NextResponse.json({ error: "Ungültige Anfrage." }, { status: 400 });
   }
@@ -24,6 +26,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Ungültige Anfrage." }, { status: 400 });
   }
 
-  await recordAnalyticsEvent(brandId, kind as AnalyticsEventKind);
+  await recordAnalyticsEvent(brandId, kind as AnalyticsEventKind, { soloPitchId, battleId });
   return NextResponse.json({ ok: true });
 }

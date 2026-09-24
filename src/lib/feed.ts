@@ -12,6 +12,7 @@ import { finalizeAndNotifyBattle } from "@/lib/battle-notify";
 import { getAllSoloPitches } from "@/lib/solo-pitch";
 import { getReactionCounts } from "@/lib/reaction";
 import { getActiveBoostedSoloPitchIds } from "@/lib/boost";
+import { getViewCountsForSoloPitches, getViewCountsForBattles } from "@/lib/analytics";
 
 // Phase 9.1 — one feed entry per Duell (battle), not per side.
 //
@@ -60,6 +61,8 @@ export type FeedDuel = {
    */
   officialTally: VoteTally | null;
   commentCount: number;
+  /** Phase 41: both sides combined — see analytics.ts's getViewCountsForBattles. */
+  viewCount: number;
   viewerVotedBrandId: string | null;
   /** Viewer's own brand is either side of this Duell — can't vote, no follow button on either side. */
   viewerOwnsThisBattle: boolean;
@@ -95,7 +98,7 @@ async function buildFeedDuels(viewerId: string | null): Promise<FeedDuel[]> {
     { battleId: b.id, brandId: b.brandBId },
   ]);
 
-  const [tallies, officialTallies, commentCounts, likeCounts, viewerLikedKeys, viewerVotes, viewerBrand, followedBrandIds] =
+  const [tallies, officialTallies, commentCounts, likeCounts, viewerLikedKeys, viewerVotes, viewerBrand, followedBrandIds, viewCounts] =
     await Promise.all([
       Promise.all(eligible.map((b) => getVoteTally(b.id, b.brandAId, b.brandBId))),
       // Phase 12: the frozen result at votingEndsAt — null for a battle
@@ -113,6 +116,7 @@ async function buildFeedDuels(viewerId: string | null): Promise<FeedDuel[]> {
       viewerId ? Promise.all(eligible.map((b) => getUserVote(b.id, viewerId))) : Promise.resolve([]),
       viewerId ? getBrandForUser(viewerId) : Promise.resolve(null),
       viewerId ? getFollowedBrandIds(viewerId) : Promise.resolve([]),
+      getViewCountsForBattles(battleIds),
     ]);
 
   const talliesByBattle = new Map(eligible.map((b, i) => [b.id, tallies[i]]));
@@ -194,6 +198,7 @@ async function buildFeedDuels(viewerId: string | null): Promise<FeedDuel[]> {
       tally,
       officialTally,
       commentCount,
+      viewCount: viewCounts.get(battle.id) ?? 0,
       viewerVotedBrandId,
       viewerOwnsThisBattle,
       activatedAt: activatedAt.toISOString(),
@@ -257,6 +262,8 @@ export type FeedSoloPitch = {
   viewerFollowsBrand: boolean;
   commentCount: number;
   reactionCount: number;
+  /** Phase 41: TikTok/Insta always show this — see analytics.ts's getViewCountsForSoloPitches. */
+  viewCount: number;
   createdAt: string; // ISO
   /** Phase 26: an active, paid-for ranking bump — see boost.ts. Shown as a small badge to everyone, not just the owner. */
   boosted: boolean;
@@ -272,15 +279,17 @@ async function buildFeedSoloPitches(viewerId: string | null): Promise<FeedSoloPi
   if (pitches.length === 0) return [];
 
   const ids = pitches.map((p) => p.id);
-  const [likeCounts, commentCounts, reactionCounts, viewerLikedIds, viewerBrand, followedBrandIds, boostedIds] = await Promise.all([
-    getSoloPitchLikeCounts(ids),
-    getCommentCountsForSoloPitches(ids),
-    getReactionCounts(ids),
-    viewerId ? getUserLikedSoloPitchIds(viewerId, ids) : Promise.resolve(new Set<string>()),
-    viewerId ? getBrandForUser(viewerId) : Promise.resolve(null),
-    viewerId ? getFollowedBrandIds(viewerId) : Promise.resolve([]),
-    getActiveBoostedSoloPitchIds(ids),
-  ]);
+  const [likeCounts, commentCounts, reactionCounts, viewerLikedIds, viewerBrand, followedBrandIds, boostedIds, viewCounts] =
+    await Promise.all([
+      getSoloPitchLikeCounts(ids),
+      getCommentCountsForSoloPitches(ids),
+      getReactionCounts(ids),
+      viewerId ? getUserLikedSoloPitchIds(viewerId, ids) : Promise.resolve(new Set<string>()),
+      viewerId ? getBrandForUser(viewerId) : Promise.resolve(null),
+      viewerId ? getFollowedBrandIds(viewerId) : Promise.resolve([]),
+      getActiveBoostedSoloPitchIds(ids),
+      getViewCountsForSoloPitches(ids),
+    ]);
   const followedSet = new Set(followedBrandIds);
 
   return pitches.map((pitch): FeedSoloPitch => ({
@@ -300,6 +309,7 @@ async function buildFeedSoloPitches(viewerId: string | null): Promise<FeedSoloPi
     viewerFollowsBrand: followedSet.has(pitch.brand.id),
     commentCount: commentCounts.get(pitch.id) ?? 0,
     reactionCount: reactionCounts.get(pitch.id) ?? 0,
+    viewCount: viewCounts.get(pitch.id) ?? 0,
     createdAt: pitch.createdAt.toISOString(),
     boosted: boostedIds.has(pitch.id),
     ctaLabel: pitch.ctaLabel,

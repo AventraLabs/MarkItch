@@ -6,6 +6,7 @@ import {
   ArrowLeftRight,
   ChevronLeft,
   ChevronRight,
+  Eye,
   Heart,
   MessageCircle,
   Play,
@@ -260,8 +261,8 @@ export function FeedDuelCard({
   useEffect(() => {
     if (!inView || trackedViewSides.current.has(sideIndex)) return;
     trackedViewSides.current.add(sideIndex);
-    trackAnalyticsEvent(duel.sides[sideIndex].brandId, "view");
-  }, [inView, sideIndex, duel.sides]);
+    trackAnalyticsEvent(duel.sides[sideIndex].brandId, "view", { battleId: duel.battleId });
+  }, [inView, sideIndex, duel.sides, duel.battleId]);
 
   async function handleVote() {
     setVoting(true);
@@ -473,6 +474,9 @@ export function FeedDuelCard({
           )}
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
             {stageLabel}
+          </span>
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400">
+            <Eye size={11} /> {duel.viewCount}
           </span>
         </div>
         {side.ctaUrl && side.ctaLabel && (

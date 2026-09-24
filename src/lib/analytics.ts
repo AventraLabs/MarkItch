@@ -9,8 +9,12 @@ import { getSoloPitchesForBrand } from "@/lib/solo-pitch";
 export type AnalyticsEventKind = "view" | "share";
 
 /** Fire-and-forget event log — see schema.ts for why this is a log, not a counter. */
-export async function recordAnalyticsEvent(brandId: string, kind: AnalyticsEventKind): Promise<void> {
-  await db.insert(brandAnalyticsEvents).values({ brandId, kind });
+export async function recordAnalyticsEvent(
+  brandId: string,
+  kind: AnalyticsEventKind,
+  target?: { soloPitchId?: string; battleId?: string },
+): Promise<void> {
+  await db.insert(brandAnalyticsEvents).values({ brandId, kind, soloPitchId: target?.soloPitchId, battleId: target?.battleId });
 }
 
 async function getEventCount(brandId: string, kind: AnalyticsEventKind): Promise<number> {
@@ -19,6 +23,28 @@ async function getEventCount(brandId: string, kind: AnalyticsEventKind): Promise
     .from(brandAnalyticsEvents)
     .where(and(eq(brandAnalyticsEvents.brandId, brandId), eq(brandAnalyticsEvents.kind, kind)));
   return row?.n ?? 0;
+}
+
+/** Phase 41: per-video view counts (Luca: TikTok/Insta always show this) — batched for a whole feed page. */
+export async function getViewCountsForSoloPitches(soloPitchIds: string[]): Promise<Map<string, number>> {
+  if (soloPitchIds.length === 0) return new Map();
+  const rows = await db
+    .select({ soloPitchId: brandAnalyticsEvents.soloPitchId, n: count() })
+    .from(brandAnalyticsEvents)
+    .where(and(eq(brandAnalyticsEvents.kind, "view"), inArray(brandAnalyticsEvents.soloPitchId, soloPitchIds)))
+    .groupBy(brandAnalyticsEvents.soloPitchId);
+  return new Map(rows.map((r) => [r.soloPitchId as string, r.n]));
+}
+
+/** Same as getViewCountsForSoloPitches, keyed on a battle instead (both sides combined). */
+export async function getViewCountsForBattles(battleIds: string[]): Promise<Map<string, number>> {
+  if (battleIds.length === 0) return new Map();
+  const rows = await db
+    .select({ battleId: brandAnalyticsEvents.battleId, n: count() })
+    .from(brandAnalyticsEvents)
+    .where(and(eq(brandAnalyticsEvents.kind, "view"), inArray(brandAnalyticsEvents.battleId, battleIds)))
+    .groupBy(brandAnalyticsEvents.battleId);
+  return new Map(rows.map((r) => [r.battleId as string, r.n]));
 }
 
 export type BrandAnalyticsSummary = {

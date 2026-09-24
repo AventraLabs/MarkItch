@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Heart, MessageCircle, Repeat2, Rocket, Share2, Play, Volume2, VolumeX, X } from "lucide-react";
+import { Eye, Heart, MessageCircle, Repeat2, Rocket, Share2, Play, Volume2, VolumeX, X } from "lucide-react";
 import { FollowButton } from "@/components/brand/follow-button";
 import { PitchChallengeButton } from "@/components/pitches/pitch-challenge-button";
 import { BoostButton } from "@/components/pitches/boost-button";
@@ -69,8 +69,8 @@ export function FeedSoloPitchCard({
   useEffect(() => {
     if (!inView || trackedView.current) return;
     trackedView.current = true;
-    trackAnalyticsEvent(pitch.brandId, "view");
-  }, [inView, pitch.brandId]);
+    trackAnalyticsEvent(pitch.brandId, "view", { soloPitchId: pitch.soloPitchId });
+  }, [inView, pitch.brandId, pitch.soloPitchId]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -168,6 +168,9 @@ export function FeedSoloPitchCard({
             <FollowButton brandId={pitch.brandId} isFollowing={pitch.viewerFollowsBrand} />
           )}
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-zinc-300">Solo-Pitch</span>
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400">
+            <Eye size={11} /> {pitch.viewCount}
+          </span>
           {pitch.boosted && (
             <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-medium text-orange-400">
               <Rocket size={11} /> Boost
