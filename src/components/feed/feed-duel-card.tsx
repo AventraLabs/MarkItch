@@ -463,8 +463,11 @@ export function FeedDuelCard({
         </div>
       )}
 
-      {/* Bottom info + vote (extra bottom padding clears the fixed BottomNav) */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 pb-24 pr-20">
+      {/* Bottom info + vote — the card itself now already stops right above
+          the BottomNav (--bottom-nav-h), so this just needs a small edge
+          margin, not the old large offset that used to clear a translucent
+          nav floating on top of a full-height video. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 pb-4 pr-20">
         <div className="pointer-events-auto mb-2 flex items-center gap-2">
           <Link href={`/brands/${side.brandSlug}`} className="text-sm font-bold text-white hover:underline">
             {side.brandName}
@@ -505,8 +508,10 @@ export function FeedDuelCard({
       {/* Right action rail — pointer-events-none on the wrapper, auto only
           on each button, so the gaps between icons (and, on a duel card,
           anything near this edge) still pass a swipe/tap through to the
-          gesture layer instead of being silently swallowed by empty space. */}
-      <div className="pointer-events-none absolute bottom-40 right-3 flex flex-col items-center gap-5">
+          gesture layer instead of being silently swallowed by empty space.
+          Luca: the last icon (Melden) should sit in the card's bottom-right
+          corner — same small edge margin as the text block on the left. */}
+      <div className="pointer-events-none absolute bottom-4 right-3 flex flex-col items-center gap-5">
         <button
           onClick={() => (isLoggedIn ? onToggleLike(duel, sideIndex) : (window.location.href = "/login"))}
           className="pointer-events-auto flex flex-col items-center gap-1 text-white"

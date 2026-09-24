@@ -26,6 +26,11 @@ body {
   background: #000000;
   color: #ffffff;
   font-family: Arial, Helvetica, sans-serif;
+  /* iOS Safari's own elastic overscroll bounce (rubber-banding past the top/
+     bottom of a scroll container) can compound the "dragging the whole
+     screen like a zoomed photo" feeling on a duel swipe even with pinch-zoom
+     locked via viewport — this turns that bounce off everywhere. */
+  overscroll-behavior: none;
 }
 
 /* Phase 35: the big heart that pops up on a double-tap like, same idea as

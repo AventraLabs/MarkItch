@@ -159,7 +159,7 @@ export function FeedSoloPitchCard({
         </button>
       )}
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 pb-24 pr-20">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 pb-4 pr-20">
         <div className="pointer-events-auto mb-2 flex items-center gap-2">
           <Link href={`/brands/${pitch.brandSlug}`} className="text-sm font-bold text-white hover:underline">
             {pitch.brandName}
@@ -198,7 +198,7 @@ export function FeedSoloPitchCard({
           on each button, so a swipe/tap near this edge (or a double-tap
           slightly off-center) still reaches the gesture layer instead of
           being swallowed by empty space between icons. */}
-      <div className="pointer-events-none absolute bottom-40 right-3 flex flex-col items-center gap-5">
+      <div className="pointer-events-none absolute bottom-4 right-3 flex flex-col items-center gap-5">
         <button
           onClick={() => (isLoggedIn ? onToggleLike(pitch) : (window.location.href = "/login"))}
           className="pointer-events-auto flex flex-col items-center gap-1 text-white"
