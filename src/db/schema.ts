@@ -630,6 +630,14 @@ export const creatorSubmissions = pgTable("creator_submissions", {
     .notNull()
     .references(() => brands.id, { onDelete: "cascade" }),
   videoUrl: text("video_url").notNull(),
+  // Phase 41: same fields a Solo-Pitch requires — Luca: "wenn es genau das
+  // selbe Video sein wird was sie fertig auf Insta gepostet haben" [muss
+  // es trotzdem eine Beschreibung/Beschriftung/Link haben, 1:1 wie ein
+  // Solo-Pitch]. Nullable (like solo_pitches' own description/cta columns)
+  // so no backfill is needed for submissions posted before this existed.
+  description: text("description"),
+  ctaLabel: text("cta_label"),
+  ctaUrl: text("cta_url"),
   period: text("period").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

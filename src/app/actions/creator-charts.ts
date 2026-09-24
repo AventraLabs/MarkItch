@@ -5,9 +5,12 @@ import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { postCreatorSubmission } from "@/lib/creator-charts";
 import { readVideoUrlField } from "@/lib/storage";
+import { validateCtaLink } from "@/lib/cta-link";
 import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
 
-export type PostCreatorVideoFormState = { error?: string; success?: boolean } | undefined;
+const MAX_DESCRIPTION_LENGTH = 300;
+
+export type PostCreatorVideoFormState = { errors?: Record<string, string[]>; success?: boolean } | undefined;
 
 /**
  * Phase 20: a creator posts the same promo video they'd post on Instagram/
@@ -24,26 +27,43 @@ export async function postCreatorVideo(
   const user = await requireUser();
   const myBrand = await getBrandForUser(user.id);
   if (!myBrand) {
-    return { error: "Du musst zuerst eine Marke erstellen." };
+    return { errors: { _form: ["Du musst zuerst eine Marke erstellen."] } };
   }
 
   const targetBrandId = formData.get("targetBrandId");
   if (typeof targetBrandId !== "string" || !targetBrandId) {
-    return { error: "Bitte wähle die Marke aus, für die das Video ist." };
+    return { errors: { _form: ["Bitte wähle die Marke aus, für die das Video ist."] } };
   }
 
   const video = readVideoUrlField(formData, "creator-videos");
   if ("error" in video) {
-    return { error: video.error };
+    return { errors: { video: [video.error] } };
+  }
+
+  // Phase 41: same required fields as a Solo-Pitch — Luca: "sollte 1:1
+  // aussehen wie ein Solo-Pitch", especially since this is often literally
+  // the same video already posted elsewhere with its own caption/link.
+  const rawDescription = formData.get("description");
+  const description = typeof rawDescription === "string" ? rawDescription.trim() : "";
+  if (!description) {
+    return { errors: { description: ["Bitte eine kurze Beschreibung schreiben."] } };
+  }
+  if (description.length > MAX_DESCRIPTION_LENGTH) {
+    return { errors: { description: [`Maximal ${MAX_DESCRIPTION_LENGTH} Zeichen.`] } };
+  }
+
+  const cta = validateCtaLink(formData);
+  if ("errors" in cta) {
+    return { errors: cta.errors };
   }
 
   const { allowed } = await checkRateLimit("creator-submit", myBrand.id);
   if (!allowed) {
-    return { error: RATE_LIMIT_MESSAGE };
+    return { errors: { _form: [RATE_LIMIT_MESSAGE] } };
   }
 
-  const result = await postCreatorSubmission(myBrand.id, targetBrandId, video.videoUrl);
-  if (result.error) return { error: result.error };
+  const result = await postCreatorSubmission(myBrand.id, targetBrandId, video.videoUrl, description, cta.ctaLabel, cta.ctaUrl);
+  if (result.error) return { errors: { _form: [result.error] } };
 
   refresh();
   return { success: true };

@@ -169,6 +169,13 @@
       "when": 1790266752399,
       "tag": "0023_worthless_roland_deschain",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790273910470,
+      "tag": "0024_ambitious_norrin_radd",
+      "breakpoints": true
     }
   ]
 }

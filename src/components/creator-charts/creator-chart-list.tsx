@@ -75,6 +75,17 @@ export function CreatorChartList({
             </span>
           </div>
           <video src={e.videoUrl} className="mb-2 max-h-64 w-full rounded-lg bg-black object-contain" controls playsInline preload="metadata" />
+          {e.description && <p className="mb-2 text-sm text-white/90">{e.description}</p>}
+          {e.ctaUrl && e.ctaLabel && (
+            <a
+              href={e.ctaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mb-2 inline-block rounded-full bg-orange-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-orange-500"
+            >
+              {e.ctaLabel} →
+            </a>
+          )}
           <div className="flex items-center justify-between">
             {canVote &&
               (votedId ? (

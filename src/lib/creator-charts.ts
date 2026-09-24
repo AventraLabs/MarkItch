@@ -21,6 +21,9 @@ export type CreatorChartEntry = {
   creatorSlug: string;
   creatorLogoUrl: string | null;
   videoUrl: string;
+  description: string | null;
+  ctaLabel: string | null;
+  ctaUrl: string | null;
   voteCount: number;
   createdAt: string; // ISO
 };
@@ -64,6 +67,9 @@ export async function getChartForBrand(
       creatorSlug: r.creator.slug,
       creatorLogoUrl: r.creator.logoUrl,
       videoUrl: r.submission.videoUrl,
+      description: r.submission.description,
+      ctaLabel: r.submission.ctaLabel,
+      ctaUrl: r.submission.ctaUrl,
       voteCount: tally.get(r.submission.id) ?? 0,
       createdAt: r.submission.createdAt.toISOString(),
     }))
@@ -85,6 +91,9 @@ export async function postCreatorSubmission(
   creatorBrandId: string,
   targetBrandId: string,
   videoUrl: string,
+  description: string,
+  ctaLabel: string,
+  ctaUrl: string,
 ): Promise<{ error?: string }> {
   if (creatorBrandId === targetBrandId) {
     return { error: "Du kannst kein Video für deine eigene Marke posten." };
@@ -93,7 +102,7 @@ export async function postCreatorSubmission(
   if (!targetBrand) {
     return { error: "Diese Marke existiert nicht." };
   }
-  await db.insert(creatorSubmissions).values({ brandId: targetBrandId, creatorBrandId, videoUrl, period: currentPeriod() });
+  await db.insert(creatorSubmissions).values({ brandId: targetBrandId, creatorBrandId, videoUrl, description, ctaLabel, ctaUrl, period: currentPeriod() });
   return {};
 }
 
