@@ -72,6 +72,17 @@ export function CastingVoteList({
               {isWinner && <span className="text-xs font-semibold text-orange-400">🏆 Partner</span>}
             </div>
             <video src={s.videoUrl} className="mb-2 max-h-64 w-full rounded-lg bg-black object-contain" controls playsInline preload="metadata" />
+            {s.description && <p className="mb-2 text-sm text-white/90">{s.description}</p>}
+            {s.ctaUrl && s.ctaLabel && (
+              <a
+                href={s.ctaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-2 inline-block rounded-full bg-orange-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-orange-500"
+              >
+                {s.ctaLabel} →
+              </a>
+            )}
             <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-zinc-800">
               <div className="h-full bg-orange-500" style={{ width: `${pct}%` }} />
             </div>

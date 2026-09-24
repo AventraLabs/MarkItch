@@ -59,6 +59,9 @@ export type CastingSubmissionWithBrand = {
   brandSlug: string;
   brandLogoUrl: string | null;
   videoUrl: string;
+  description: string | null;
+  ctaLabel: string | null;
+  ctaUrl: string | null;
   voteCount: number;
 };
 
@@ -113,6 +116,9 @@ export async function getCastingById(id: string, viewerId: string | null): Promi
       brandSlug: r.brand.slug,
       brandLogoUrl: r.brand.logoUrl,
       videoUrl: r.submission.videoUrl,
+      description: r.submission.description,
+      ctaLabel: r.submission.ctaLabel,
+      ctaUrl: r.submission.ctaUrl,
       voteCount: tally.get(r.submission.id) ?? 0,
     })),
     stage,
@@ -175,7 +181,14 @@ export async function createCasting(hostBrandId: string, prompt: string): Promis
   return casting;
 }
 
-export async function submitToCasting(castingId: string, brandId: string, videoUrl: string): Promise<{ error?: string }> {
+export async function submitToCasting(
+  castingId: string,
+  brandId: string,
+  videoUrl: string,
+  description: string,
+  ctaLabel: string,
+  ctaUrl: string,
+): Promise<{ error?: string }> {
   const [casting] = await db.select().from(partnerCastings).where(eq(partnerCastings.id, castingId)).limit(1);
   if (!casting) return { error: "Dieses Casting existiert nicht." };
   if (casting.hostBrandId === brandId) return { error: "Du kannst nicht bei deinem eigenen Casting mitmachen." };
@@ -188,7 +201,7 @@ export async function submitToCasting(castingId: string, brandId: string, videoU
     .limit(1);
   if (existing) return { error: "Du hast für dieses Casting bereits eingereicht." };
 
-  await db.insert(castingSubmissions).values({ castingId, brandId, videoUrl });
+  await db.insert(castingSubmissions).values({ castingId, brandId, videoUrl, description, ctaLabel, ctaUrl });
   return {};
 }
 

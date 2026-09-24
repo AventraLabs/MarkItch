@@ -577,6 +577,11 @@ export const castingSubmissions = pgTable(
       .notNull()
       .references(() => brands.id, { onDelete: "cascade" }),
     videoUrl: text("video_url").notNull(),
+    // Phase 41: same fields as a Solo-Pitch/Creator-Video — nullable so no
+    // backfill is needed for submissions posted before this existed.
+    description: text("description"),
+    ctaLabel: text("cta_label"),
+    ctaUrl: text("cta_url"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex("casting_submissions_casting_brand_unique_idx").on(table.castingId, table.brandId)],
