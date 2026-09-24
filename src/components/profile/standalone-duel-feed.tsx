@@ -103,7 +103,7 @@ export function StandaloneDuelFeed({
         <X size={18} />
       </button>
 
-      <div ref={scrollRef} className="h-dvh w-full snap-y snap-mandatory overflow-y-scroll">
+      <div ref={scrollRef} className="h-[calc(100dvh-var(--bottom-nav-h))] w-full snap-y snap-mandatory overflow-y-scroll">
         {duels.map((duel) => (
           <FeedDuelCard
             key={duel.key}

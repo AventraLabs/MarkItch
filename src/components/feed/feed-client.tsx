@@ -323,7 +323,7 @@ export function FeedClient({
     // video with object-cover inside a full-viewport-width box gets
     // aggressively cropped on a wide, short window. Below this width
     // (any real phone) it's a no-op, full bleed as before.
-    <div className="relative mx-auto h-dvh w-full max-w-[480px] overflow-hidden bg-black md:border-x md:border-zinc-900">
+    <div className="relative mx-auto h-[calc(100dvh-var(--bottom-nav-h))] w-full max-w-[480px] overflow-hidden bg-black md:border-x md:border-zinc-900">
       {/* Tabs */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center gap-6 pt-[calc(env(safe-area-inset-top)+14px)]">
         {(
@@ -378,7 +378,7 @@ export function FeedClient({
         <div ref={sentinelRef} className="h-1 w-full" />
 
         {items.length === 0 && !loading && !showEmptyFollowing && (
-          <div className="flex h-dvh w-full flex-col items-center justify-center px-8 text-center">
+          <div className="flex h-full w-full flex-col items-center justify-center px-8 text-center">
             <p className="text-lg font-semibold text-white">Noch keine Pitches</p>
             <p className="mt-2 text-sm text-zinc-400">
               Sobald jemand einen Solo-Pitch postet oder ein Duell live geht, taucht es hier auf.
@@ -387,7 +387,7 @@ export function FeedClient({
         )}
 
         {showEmptyFollowing && (
-          <div className="flex h-dvh w-full flex-col items-center justify-center px-8 text-center">
+          <div className="flex h-full w-full flex-col items-center justify-center px-8 text-center">
             <p className="text-lg font-semibold text-white">
               {requiresLogin ? "Melde dich an" : "Folge ein paar Marken"}
             </p>

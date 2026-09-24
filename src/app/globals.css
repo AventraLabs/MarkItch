@@ -8,6 +8,13 @@
    Hülle sichtbar). */
 :root {
   color-scheme: dark;
+  /* Phase 41: BottomNav's own rendered height (py-2.5 padding + icon +
+     label, see nav/bottom-nav.tsx) plus the home-indicator safe area below
+     it. Feed/video cards use this to stop exactly at its top edge instead
+     of running full-screen underneath it — Luca: "es darf nur von oberen
+     Rand vom Display bis zu der Oberkante von der unteren Tableiste, wie
+     auf TikTok", not the video rendered full-height behind a translucent bar. */
+  --bottom-nav-h: calc(62px + env(safe-area-inset-bottom));
 }
 
 @theme inline {

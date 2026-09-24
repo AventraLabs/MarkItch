@@ -115,7 +115,7 @@ export function FeedSoloPitchCard({
     <div
       ref={containerRef}
       data-solo-pitch-id={pitch.soloPitchId}
-      className="relative h-dvh w-full snap-start snap-always bg-black"
+      className="relative h-[calc(100dvh-var(--bottom-nav-h))] w-full snap-start snap-always bg-black"
     >
       <video
         ref={videoRef}
