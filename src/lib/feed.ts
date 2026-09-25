@@ -317,7 +317,7 @@ async function buildFeedSoloPitches(viewerId: string | null): Promise<FeedSoloPi
   }));
 }
 
-export type FeedPage = { items: FeedItem[]; total: number };
+export type FeedPage = { items: FeedItem[]; total: number; followsAnyone?: boolean };
 
 export type TrendingSoloPitch = { soloPitchId: string; brandName: string; brandSlug: string; videoUrl: string; likeCount: number };
 
@@ -442,7 +442,7 @@ export async function getFeedDuelsForBrand(viewerId: string | null, brandId: str
 /** "Folge ich" — Duelle with a followed brand on either side, plus solo pitches from a followed brand, newest first. */
 export async function getFollowingFeed(viewerId: string, offset = 0, limit = 6): Promise<FeedPage> {
   const followedBrandIds = await getFollowedBrandIds(viewerId);
-  if (followedBrandIds.length === 0) return { items: [], total: 0 };
+  if (followedBrandIds.length === 0) return { items: [], total: 0, followsAnyone: false };
   const followedSet = new Set(followedBrandIds);
 
   const [duels, soloPitchItems] = await Promise.all([buildFeedDuels(viewerId), buildFeedSoloPitches(viewerId)]);
@@ -452,5 +452,10 @@ export async function getFollowingFeed(viewerId: string, offset = 0, limit = 6):
   ];
   const recencyOf = (item: FeedItem) => new Date(item.kind === "duel" ? item.activatedAt : item.createdAt).getTime();
   items.sort((a, b) => recencyOf(b) - recencyOf(a));
-  return { items: items.slice(offset, offset + limit), total: items.length };
+  // Phase 43: an empty list here used to always read as "you don't follow
+  // anyone" (Luca: "im Feed oben auf Folge ich klicke, ist es leer obwohl
+  // ich wem folge") — but it's equally reached when every brand you follow
+  // just hasn't posted anything yet, which is a completely different,
+  // non-broken situation that deserves a different message.
+  return { items: items.slice(offset, offset + limit), total: items.length, followsAnyone: true };
 }

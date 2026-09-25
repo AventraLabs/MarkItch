@@ -54,6 +54,7 @@ export function FeedClient({
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [requiresLogin, setRequiresLogin] = useState(false);
+  const [followsAnyone, setFollowsAnyone] = useState(true);
   const [muted, setMuted] = useState(true);
   const [commentTarget, setCommentTarget] = useState<CommentTarget | null>(null);
   const [reactionsSoloPitchId, setReactionsSoloPitchId] = useState<string | null>(null);
@@ -112,6 +113,7 @@ export function FeedClient({
       setItems(data.items);
       setTotal(data.total);
       setRequiresLogin(Boolean(data.requiresLogin));
+      setFollowsAnyone(data.followsAnyone ?? true);
     } finally {
       setLoading(false);
     }
@@ -425,19 +427,23 @@ export function FeedClient({
         {showEmptyFollowing && (
           <div className="flex h-full w-full flex-col items-center justify-center px-8 text-center">
             <p className="text-lg font-semibold text-white">
-              {requiresLogin ? "Melde dich an" : "Folge ein paar Marken"}
+              {requiresLogin ? "Melde dich an" : followsAnyone ? "Noch nichts Neues" : "Folge ein paar Marken"}
             </p>
             <p className="mt-2 text-sm text-zinc-400">
               {requiresLogin
                 ? "Melde dich an, um zu sehen, wenn Marken, denen du folgst, einen neuen Pitch posten."
-                : "Sobald du Marken folgst, siehst du hier ihre neuesten Pitches zuerst."}
+                : followsAnyone
+                  ? "Die Marken, denen du folgst, haben noch nichts gepostet."
+                  : "Sobald du Marken folgst, siehst du hier ihre neuesten Pitches zuerst."}
             </p>
-            <a
-              href={requiresLogin ? "/login" : "/brands"}
-              className="mt-4 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-500"
-            >
-              {requiresLogin ? "Anmelden" : "Marken entdecken"}
-            </a>
+            {(requiresLogin || !followsAnyone) && (
+              <a
+                href={requiresLogin ? "/login" : "/brands"}
+                className="mt-4 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-500"
+              >
+                {requiresLogin ? "Anmelden" : "Marken entdecken"}
+              </a>
+            )}
           </div>
         )}
       </div>
