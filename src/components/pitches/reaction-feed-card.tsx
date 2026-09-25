@@ -51,6 +51,13 @@ export function ReactionFeedCard({
   const [manuallyPaused, setManuallyPaused] = useState(false);
   const [showLikePop, setShowLikePop] = useState(false);
   const lastTapAt = useRef(0);
+  const pauseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pauseTimer.current) clearTimeout(pauseTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -75,10 +82,13 @@ export function ReactionFeedCard({
 
   const DOUBLE_TAP_MS = 300;
   function handleTap() {
-    setManuallyPaused((p) => !p);
     const now = Date.now();
     if (now - lastTapAt.current < DOUBLE_TAP_MS) {
       lastTapAt.current = 0;
+      if (pauseTimer.current) {
+        clearTimeout(pauseTimer.current);
+        pauseTimer.current = null;
+      }
       if (!isLoggedIn) {
         window.location.href = "/login";
         return;
@@ -88,6 +98,10 @@ export function ReactionFeedCard({
       setTimeout(() => setShowLikePop(false), 700);
     } else {
       lastTapAt.current = now;
+      pauseTimer.current = setTimeout(() => {
+        setManuallyPaused((p) => !p);
+        pauseTimer.current = null;
+      }, DOUBLE_TAP_MS);
     }
   }
 

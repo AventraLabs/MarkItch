@@ -24,6 +24,7 @@ export function FeedSoloPitchCard({
   onClose,
   onUpdated,
   onDeleted,
+  onActive,
 }: {
   pitch: FeedSoloPitch;
   isLoggedIn: boolean;
@@ -40,6 +41,8 @@ export function FeedSoloPitchCard({
   /** Phase 32: owner-only edit (via the "⋮" menu) needs to patch the card's data in whatever list/state renders it. */
   onUpdated?: (patch: Partial<FeedSoloPitch>) => void;
   onDeleted?: () => void;
+  /** Phase 43: tells FeedClient this card is the one on screen now, so it can keep only nearby cards' videos mounted. */
+  onActive?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -52,6 +55,13 @@ export function FeedSoloPitchCard({
   const [manuallyPaused, setManuallyPaused] = useState(false);
   const [showLikePop, setShowLikePop] = useState(false);
   const lastTapAt = useRef(0);
+  const pauseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pauseTimer.current) clearTimeout(pauseTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -73,6 +83,10 @@ export function FeedSoloPitchCard({
   }, [inView, pitch.brandId, pitch.soloPitchId]);
 
   useEffect(() => {
+    if (inView) onActive?.();
+  }, [inView, onActive]);
+
+  useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     video.muted = muted;
@@ -87,18 +101,22 @@ export function FeedSoloPitchCard({
     setTimeout(() => setShareLabel(null), 1800);
   }
 
-  // Phase 35: double-tap to like, single tap to pause/resume — both
-  // standard, both need to work off the exact same tap (Luca: "muss du
-  // schaffen"). Every tap toggles pause immediately (zero added latency,
-  // same as before); if a second tap lands inside the double-tap window,
-  // that's a *second* toggle (netting back to the pre-tap play state) plus
-  // a like — never an unlike, matching Instagram's own double-tap.
+  // Phase 43: the pause toggle used to fire on every single tap immediately,
+  // including the *first* tap of an intended double-tap — Luca: man will
+  // liken, aber genau zwischen dem Doppeltipp pausiert er kurz und setzt
+  // dann fort. TikTok/Instagram wait out the double-tap window before
+  // committing to a plain pause; a first tap now only schedules the pause,
+  // and a second tap within the window cancels it and likes instead (never
+  // unlikes, matching Instagram).
   const DOUBLE_TAP_MS = 300;
   function handleTap() {
-    setManuallyPaused((p) => !p);
     const now = Date.now();
     if (now - lastTapAt.current < DOUBLE_TAP_MS) {
       lastTapAt.current = 0;
+      if (pauseTimer.current) {
+        clearTimeout(pauseTimer.current);
+        pauseTimer.current = null;
+      }
       if (!isLoggedIn) {
         window.location.href = "/login";
         return;
@@ -108,6 +126,10 @@ export function FeedSoloPitchCard({
       setTimeout(() => setShowLikePop(false), 700);
     } else {
       lastTapAt.current = now;
+      pauseTimer.current = setTimeout(() => {
+        setManuallyPaused((p) => !p);
+        pauseTimer.current = null;
+      }, DOUBLE_TAP_MS);
     }
   }
 

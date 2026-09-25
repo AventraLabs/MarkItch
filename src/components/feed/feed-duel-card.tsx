@@ -173,6 +173,7 @@ export function FeedDuelCard({
   onVote,
   onOpenComments,
   onShare,
+  onActive,
 }: {
   duel: FeedDuel;
   isLoggedIn: boolean;
@@ -182,6 +183,8 @@ export function FeedDuelCard({
   onVote: (duel: FeedDuel, sideIndex: 0 | 1) => Promise<void>;
   onOpenComments: (battleId: string) => void;
   onShare: (duel: FeedDuel) => void;
+  /** Phase 43: tells FeedClient this card is the one on screen now, so it can keep only nearby cards' videos mounted. */
+  onActive?: () => void;
 }) {
   const [sideIndex, setSideIndex] = useState<0 | 1>(duel.initialSideIndex);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -199,6 +202,13 @@ export function FeedDuelCard({
   const [manuallyPaused, setManuallyPaused] = useState(false);
   const [showLikePop, setShowLikePop] = useState(false);
   const lastTapAt = useRef(0);
+  const pauseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pauseTimer.current) clearTimeout(pauseTimer.current);
+    };
+  }, []);
   // Phase 38: a real dragging carousel (Luca: "wie auf Instagram... soll
   // der Bildschirm mit sliden") instead of an instant cut — this ref tracks
   // the in-progress gesture and directly mutates slideRef's transform on
@@ -263,6 +273,10 @@ export function FeedDuelCard({
     trackedViewSides.current.add(sideIndex);
     trackAnalyticsEvent(duel.sides[sideIndex].brandId, "view", { battleId: duel.battleId });
   }, [inView, sideIndex, duel.sides, duel.battleId]);
+
+  useEffect(() => {
+    if (inView) onActive?.();
+  }, [inView, onActive]);
 
   async function handleVote() {
     setVoting(true);
@@ -353,10 +367,17 @@ export function FeedDuelCard({
     if (d.horizontal === false) return; // was a vertical gesture, not ours to handle
 
     // d.horizontal === null: never moved past the tap threshold — a tap.
-    setManuallyPaused((p) => !p);
+    // Phase 43: a first tap only schedules the pause toggle instead of
+    // firing it immediately — a second tap within the window cancels it
+    // and likes instead, so an intended double-tap-to-like never flashes
+    // a pause/resume in between (same fix as the solo-pitch card).
     const now = Date.now();
     if (now - lastTapAt.current < DOUBLE_TAP_MS) {
       lastTapAt.current = 0;
+      if (pauseTimer.current) {
+        clearTimeout(pauseTimer.current);
+        pauseTimer.current = null;
+      }
       if (!isLoggedIn) {
         window.location.href = "/login";
         return;
@@ -366,6 +387,10 @@ export function FeedDuelCard({
       setTimeout(() => setShowLikePop(false), 700);
     } else {
       lastTapAt.current = now;
+      pauseTimer.current = setTimeout(() => {
+        setManuallyPaused((p) => !p);
+        pauseTimer.current = null;
+      }, DOUBLE_TAP_MS);
     }
   }
 

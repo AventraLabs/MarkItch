@@ -19,6 +19,17 @@ type Tab = "foryou" | "following";
 // cleared when the tab closes) and restores it on mount instead.
 const SCROLL_STORAGE_KEY = "markitch:feed:scrollTop";
 
+// Phase 43: every item ever scrolled past stayed mounted (a duel card
+// mounts *two* <video> elements, always, for the drag-carousel), growing
+// without bound as the "load more" sentinel kept appending — on a real
+// phone that's real, unrecoverable memory pressure, not just a perf nit,
+// and the crash it caused ("erst lädt, dann schwarz, nichts geht mehr")
+// is exactly what a WKWebView content-process kill from memory pressure
+// looks like from the outside. Only cards within this many positions of
+// the currently active one stay mounted; the rest fall back to a plain
+// same-sized placeholder div so scroll-snap positions don't shift.
+const FEED_WINDOW = 2;
+
 export function FeedClient({
   initialItems,
   initialTotal,
@@ -41,6 +52,7 @@ export function FeedClient({
   const [items, setItems] = useState<FeedItem[]>(initialItems);
   const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [requiresLogin, setRequiresLogin] = useState(false);
   const [muted, setMuted] = useState(true);
   const [commentTarget, setCommentTarget] = useState<CommentTarget | null>(null);
@@ -171,6 +183,19 @@ export function FeedClient({
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [loadMore]);
+
+  // A card reports itself active once it's actually the one on screen
+  // (same >=60% threshold each card already uses for autoplay) — that
+  // recenters the mounted window, it never needs to know about leaving.
+  const handleActive = useCallback(
+    (key: string) => {
+      setActiveIndex((prev) => {
+        const idx = items.findIndex((i) => i.key === key);
+        return idx === -1 ? prev : idx;
+      });
+    },
+    [items],
+  );
 
   function patchDuel(key: string, patch: Partial<FeedDuel>) {
     setItems((prev) => prev.map((item) => (item.kind === "duel" && item.key === key ? { ...item, ...patch } : item)));
@@ -345,8 +370,17 @@ export function FeedClient({
       </div>
 
       <div ref={scrollRef} className="h-full w-full snap-y snap-mandatory overflow-y-scroll">
-        {items.map((item) =>
-          item.kind === "duel" ? (
+        {items.map((item, index) => {
+          if (Math.abs(index - activeIndex) > FEED_WINDOW) {
+            // Out of the mounted window — same height/snap behavior, no video.
+            return (
+              <div
+                key={item.key}
+                className="relative h-[calc(100dvh-var(--bottom-nav-h))] w-full snap-start snap-always bg-black"
+              />
+            );
+          }
+          return item.kind === "duel" ? (
             <FeedDuelCard
               key={item.key}
               duel={item}
@@ -357,6 +391,7 @@ export function FeedClient({
               onVote={handleVote}
               onOpenComments={(battleId) => setCommentTarget({ kind: "battle", id: battleId })}
               onShare={handleShare}
+              onActive={() => handleActive(item.key)}
             />
           ) : (
             <FeedSoloPitchCard
@@ -372,9 +407,10 @@ export function FeedClient({
               onShare={handleShareSolo}
               onUpdated={(patch) => patchSolo(item.soloPitchId, patch)}
               onDeleted={() => handleSoloPitchDeleted(item.soloPitchId)}
+              onActive={() => handleActive(item.key)}
             />
-          ),
-        )}
+          );
+        })}
         <div ref={sentinelRef} className="h-1 w-full" />
 
         {items.length === 0 && !loading && !showEmptyFollowing && (
