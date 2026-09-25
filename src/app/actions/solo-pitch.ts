@@ -8,7 +8,7 @@ import { soloPitches } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { readVideoUrlField } from "@/lib/storage";
-import { PITCH_CATEGORY } from "@/lib/battle-format";
+import { DEFAULT_DUEL_CATEGORY } from "@/lib/battle-format";
 import { validateCtaLink } from "@/lib/cta-link";
 
 const MAX_DESCRIPTION_LENGTH = 300;
@@ -68,7 +68,7 @@ export async function postSoloPitch(_prevState: SoloPitchFormState, formData: Fo
     .values({
       brandId: myBrand.id,
       videoUrl: video.videoUrl,
-      category: PITCH_CATEGORY,
+      category: DEFAULT_DUEL_CATEGORY,
       description: description.description,
       ctaLabel: cta.ctaLabel,
       ctaUrl: cta.ctaUrl,

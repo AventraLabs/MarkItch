@@ -7,11 +7,20 @@ import { battles, challenges, soloPitches } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import { getBrandForUser, getBrandMemberUserIds } from "@/lib/brand";
 import { CHALLENGE_WINDOW_MS, effectiveStatus, getLivePendingChallengeBetween } from "@/lib/challenge";
-import { PITCH_CATEGORY, PRODUCTION_WINDOW_MS } from "@/lib/battle-format";
+import { DUEL_CATEGORIES, PRODUCTION_WINDOW_MS, type DuelCategory } from "@/lib/battle-format";
 import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
 import { getActorLabel, notifyUsers } from "@/lib/notification";
 
 export type ChallengeFormState = { error?: string } | undefined;
+
+/** Shared by both "send a challenge" actions below. */
+function parseCategory(formData: FormData): DuelCategory | { error: string } {
+  const category = formData.get("category");
+  if (typeof category !== "string" || !DUEL_CATEGORIES.includes(category as DuelCategory)) {
+    return { error: "Bitte eine Kategorie wählen." };
+  }
+  return category as DuelCategory;
+}
 
 /** Brand A challenges Brand B. Triggered from B's public profile page. */
 export async function sendChallenge(_prevState: ChallengeFormState, formData: FormData): Promise<ChallengeFormState> {
@@ -34,6 +43,9 @@ export async function sendChallenge(_prevState: ChallengeFormState, formData: Fo
     return { error: "Zwischen euch läuft bereits eine offene Einladung." };
   }
 
+  const category = parseCategory(formData);
+  if (typeof category === "object") return category;
+
   const { allowed } = await checkRateLimit("challenge", myBrand.id);
   if (!allowed) {
     return { error: RATE_LIMIT_MESSAGE };
@@ -42,6 +54,7 @@ export async function sendChallenge(_prevState: ChallengeFormState, formData: Fo
   await db.insert(challenges).values({
     challengerBrandId: myBrand.id,
     challengedBrandId,
+    category,
     status: "pending",
     expiresAt: new Date(Date.now() + CHALLENGE_WINDOW_MS),
   });
@@ -107,6 +120,9 @@ export async function sendChallengeFromSoloPitch(
     return { error: "Zwischen euch läuft bereits eine offene Einladung." };
   }
 
+  const category = parseCategory(formData);
+  if (typeof category === "object") return category;
+
   const { allowed } = await checkRateLimit("challenge", myBrand.id);
   if (!allowed) {
     return { error: RATE_LIMIT_MESSAGE };
@@ -116,6 +132,7 @@ export async function sendChallengeFromSoloPitch(
     challengerBrandId: myBrand.id,
     challengedBrandId: pitch.brandId,
     soloPitchId: pitch.id,
+    category,
     status: "pending",
     expiresAt: new Date(Date.now() + CHALLENGE_WINDOW_MS),
   });
@@ -235,7 +252,7 @@ export async function respondToChallenge(_prevState: RespondFormState, formData:
         brandAId: challenge.challengerBrandId,
         brandBId: challenge.challengedBrandId,
         mode: "scheduled",
-        category: PITCH_CATEGORY,
+        category: challenge.category,
         productionDeadline: new Date(Date.now() + PRODUCTION_WINDOW_MS),
         ...prefilledBrandBVideo,
       })

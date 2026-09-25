@@ -1,0 +1,1 @@
+ALTER TABLE "challenges" ADD COLUMN "category" text DEFAULT 'Verkaufe dein Produkt oder deine Leistung in 15 Sekunden' NOT NULL;

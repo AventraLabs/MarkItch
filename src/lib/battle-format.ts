@@ -1,8 +1,20 @@
-// Phase 7: the platform-wide battle format. Just one category for now —
-// no picker UI, every battle uses this. Kept as a named constant (rather
-// than inlined) because it's stored per-row on `battles.category` too, so a
-// future "pick a category" feature is additive, not a rewrite.
-export const PITCH_CATEGORY = "Verkaufe dein Produkt oder deine Leistung in 15 Sekunden";
+// Phase 44: Luca — "bau eine Kategorie Auswahl für Duelle, auch sowas wie
+// mache einen One Take, und noch viele andere Ideen." This is a starter
+// list, not a final one — add/remove/reword entries freely, nothing else
+// needs to change (challenge.ts validates against this array, and every
+// display spot just prints whatever string ended up stored per-row).
+export const DUEL_CATEGORIES = [
+  "Verkaufe dein Produkt oder deine Leistung in 15 Sekunden",
+  "One Take — kein Schnitt, eine durchgehende Einstellung",
+  "Vorher/Nachher",
+  "Ohne Worte — nur Bild & Musik",
+  "Zeig eine echte Kundenreaktion",
+  "Behind the Scenes",
+] as const;
+
+export type DuelCategory = (typeof DUEL_CATEGORIES)[number];
+
+export const DEFAULT_DUEL_CATEGORY: DuelCategory = DUEL_CATEGORIES[0];
 
 // How long a 'scheduled' battle's two brands have to each upload their
 // video, counted from challenge acceptance (not from when the challenge was

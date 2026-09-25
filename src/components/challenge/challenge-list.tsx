@@ -74,6 +74,7 @@ export function IncomingChallengeList({ challenges }: { challenges: ChallengeWit
           <li key={c.id} className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 p-3">
             <div>
               <BrandChip brand={c.otherBrand} />
+              <p className="mt-1 text-xs text-zinc-400">{c.category}</p>
               {status === "pending" ? (
                 <p className="mt-1 text-xs text-zinc-500">{timeLeftLabel(c.expiresAt)} zum Antworten</p>
               ) : (
@@ -100,7 +101,10 @@ export function OutgoingChallengeList({ challenges }: { challenges: ChallengeWit
         const status = effectiveStatus(c);
         return (
           <li key={c.id} className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 p-3">
-            <BrandChip brand={c.otherBrand} />
+            <div>
+              <BrandChip brand={c.otherBrand} />
+              <p className="mt-1 text-xs text-zinc-400">{c.category}</p>
+            </div>
             <div className="text-right">
               <StatusBadge status={status} battleId={c.battleId} />
               {status === "pending" && <p className="mt-1 text-xs text-zinc-500">{timeLeftLabel(c.expiresAt)}</p>}

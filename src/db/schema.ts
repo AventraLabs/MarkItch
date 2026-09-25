@@ -122,6 +122,13 @@ export const challenges = pgTable(
     // respondToChallenge): the challenged brand already has a video (the
     // solo pitch itself), so only the challenger needs to produce one.
     soloPitchId: uuid("solo_pitch_id").references(() => soloPitches.id, { onDelete: "cascade" }),
+    // Phase 44: which duel format this invite is for (see DUEL_CATEGORIES
+    // in src/lib/battle-format.ts) — chosen by the challenger when sending
+    // the invite, so the challenged brand can see it before deciding, then
+    // carried over verbatim to the resulting battle's own category column
+    // on acceptance. Same hand-copied-default reasoning as battles.category
+    // below — schema.ts avoids importing from battle-format.ts.
+    category: text("category").notNull().default("Verkaufe dein Produkt oder deine Leistung in 15 Sekunden"),
     // 'pending' | 'accepted' | 'declined' — expiry is derived, not stored,
     // except we flip a pending row to 'expired' the next time it's touched
     // (respondToChallenge) so a stale row doesn't look actionable forever.
@@ -182,14 +189,13 @@ export const battles = pgTable(
     status: text("status").notNull().default("active"),
     // 'scheduled' | 'open'
     mode: text("mode").notNull().default("scheduled"),
-    // Free text for now — there's only one category platform-wide today
-    // (see PITCH_CATEGORY in src/lib/battle-format.ts), stored per-row so a
-    // future "pick a category" feature doesn't need a migration. The
-    // column-level default (kept in sync with PITCH_CATEGORY by hand, since
-    // schema.ts can't import from a module that itself has no DB
-    // dependency without risking a circular import) exists only so this
-    // migration doesn't fail on the rows that already exist — every actual
-    // insert always passes it explicitly.
+    // Phase 44: was free text with a single platform-wide value; now set
+    // from the challenger's actual pick (see DUEL_CATEGORIES in
+    // src/lib/battle-format.ts and challenges.category above) at acceptance
+    // time. The column-level default (kept in sync by hand, since schema.ts
+    // can't import from a module that itself has no DB dependency without
+    // risking a circular import) exists only so old rows aren't left null —
+    // every actual insert always passes it explicitly.
     category: text("category").notNull().default("Verkaufe dein Produkt oder deine Leistung in 15 Sekunden"),
     brandAVideoUrl: text("brand_a_video_url"),
     brandBVideoUrl: text("brand_b_video_url"),

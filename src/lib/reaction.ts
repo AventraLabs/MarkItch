@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { reactions, brands, likes, battles, soloPitches, type Reaction } from "@/db/schema";
 import { getExistingOpenBattle } from "@/lib/battle";
 import { activateBattleIfBothSidesReady } from "@/lib/battle-stage";
-import { PITCH_CATEGORY } from "@/lib/battle-format";
+import { DEFAULT_DUEL_CATEGORY } from "@/lib/battle-format";
 import { getCommentCountsForReactions } from "@/lib/comment";
 
 export type ReactionBrand = { id: string; name: string; slug: string; logoUrl: string | null };
@@ -101,7 +101,7 @@ export async function promoteReactionToBattle(reactionId: string, actingBrandId:
       brandAId: soloPitch.brandId,
       brandBId: reaction.brandId,
       mode: "open",
-      category: PITCH_CATEGORY,
+      category: DEFAULT_DUEL_CATEGORY,
       brandAVideoUrl: soloPitch.videoUrl,
       brandASubmittedAt: soloPitch.createdAt,
       brandBVideoUrl: reaction.videoUrl,
