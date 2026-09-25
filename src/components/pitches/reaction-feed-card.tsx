@@ -33,6 +33,7 @@ export function ReactionFeedCard({
   onReply,
   onOpenComments,
   onShare,
+  onActive,
 }: {
   reaction: ReactionRow;
   isLoggedIn: boolean;
@@ -44,6 +45,8 @@ export function ReactionFeedCard({
   onReply: (reactionId: string) => void;
   onOpenComments: (reactionId: string) => void;
   onShare: (reaction: ReactionRow) => void;
+  /** Tells ReactionsFeed this card is the one on screen now, so it can keep only nearby cards' videos mounted. */
+  onActive?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -79,6 +82,10 @@ export function ReactionFeedCard({
     if (inView && !manuallyPaused) video.play().catch(() => {});
     else video.pause();
   }, [inView, muted, manuallyPaused]);
+
+  useEffect(() => {
+    if (inView) onActive?.();
+  }, [inView, onActive]);
 
   const DOUBLE_TAP_MS = 300;
   function handleTap() {

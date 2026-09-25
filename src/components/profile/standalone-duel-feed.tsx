@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { FeedDuelCard } from "@/components/feed/feed-duel-card";
 import { CommentSheet, type CommentTarget } from "@/components/feed/comment-sheet";
 import { BottomNav } from "@/components/nav/bottom-nav";
 import type { FeedDuel } from "@/lib/feed";
+
+// Phase 44: same fix as StandaloneSoloPitchFeed — this overlay mounted
+// every duel in the list at once, unbounded, and a duel card mounts *two*
+// videos (both sides). That's exactly what got the app OS-killed for
+// memory during Luca's testing. Only mount cards within this many
+// positions of the active one.
+const WINDOW = 2;
 
 /**
  * Phase 40: opened from a profile grid tile's "Duelle" tab — Luca: clicking
@@ -30,6 +37,7 @@ export function StandaloneDuelFeed({
   const [duels, setDuels] = useState(initialDuels);
   const [muted, setMuted] = useState(true);
   const [commentTarget, setCommentTarget] = useState<CommentTarget | null>(null);
+  const [activeIndex, setActiveIndex] = useState(startIndex);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,6 +45,16 @@ export function StandaloneDuelFeed({
     if (el && startIndex > 0) el.scrollTop = startIndex * el.clientHeight;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleActive = useCallback(
+    (key: string) => {
+      setActiveIndex((prev) => {
+        const idx = duels.findIndex((d) => d.key === key);
+        return idx === -1 ? prev : idx;
+      });
+    },
+    [duels],
+  );
 
   function patchDuel(key: string, patch: Partial<FeedDuel>) {
     setDuels((prev) => prev.map((d) => (d.key === key ? { ...d, ...patch } : d)));
@@ -104,19 +122,30 @@ export function StandaloneDuelFeed({
       </button>
 
       <div ref={scrollRef} className="h-[calc(100dvh-var(--bottom-nav-h))] w-full snap-y snap-mandatory overflow-y-scroll overflow-x-hidden">
-        {duels.map((duel) => (
-          <FeedDuelCard
-            key={duel.key}
-            duel={duel}
-            isLoggedIn={isLoggedIn}
-            muted={muted}
-            onToggleMute={() => setMuted((m) => !m)}
-            onToggleLike={handleToggleLike}
-            onVote={handleVote}
-            onOpenComments={(battleId) => setCommentTarget({ kind: "battle", id: battleId })}
-            onShare={handleShare}
-          />
-        ))}
+        {duels.map((duel, index) => {
+          if (Math.abs(index - activeIndex) > WINDOW) {
+            return (
+              <div
+                key={duel.key}
+                className="relative h-[calc(100dvh-var(--bottom-nav-h))] w-full snap-start snap-always bg-black"
+              />
+            );
+          }
+          return (
+            <FeedDuelCard
+              key={duel.key}
+              duel={duel}
+              isLoggedIn={isLoggedIn}
+              muted={muted}
+              onToggleMute={() => setMuted((m) => !m)}
+              onToggleLike={handleToggleLike}
+              onVote={handleVote}
+              onOpenComments={(battleId) => setCommentTarget({ kind: "battle", id: battleId })}
+              onShare={handleShare}
+              onActive={() => handleActive(duel.key)}
+            />
+          );
+        })}
       </div>
 
       {commentTarget && (

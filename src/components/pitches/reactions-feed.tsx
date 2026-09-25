@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, X } from "lucide-react";
 import type { ReactionRow } from "@/lib/reaction-threads";
 import { ReactionFeedCard } from "@/components/pitches/reaction-feed-card";
+
+// Phase 44: same fix as StandaloneSoloPitchFeed/StandaloneDuelFeed — every
+// reaction in the list was mounted (and its video loaded) at once,
+// unbounded, one of the few remaining sources of the "OS kills the app for
+// memory" crash. Only mount cards within this many positions of the active one.
+const WINDOW = 2;
 
 /**
  * Phase 34: full-screen, scrollable feed of a solo pitch's reactions.
@@ -45,6 +51,7 @@ export function ReactionsFeed({
   onBackToGrid: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(startIndex);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -53,6 +60,16 @@ export function ReactionsFeed({
     // reply) shouldn't yank the viewer back to where they started.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleActive = useCallback(
+    (reactionId: string) => {
+      setActiveIndex((prev) => {
+        const idx = reactions.findIndex((r) => r.id === reactionId);
+        return idx === -1 ? prev : idx;
+      });
+    },
+    [reactions],
+  );
 
   return (
     // z-[60]: sits above other fixed overlays (StandaloneSoloPitchView,
@@ -77,21 +94,27 @@ export function ReactionsFeed({
       </button>
 
       <div ref={scrollRef} className="h-dvh w-full snap-y snap-mandatory overflow-y-scroll">
-        {reactions.map((r) => (
-          <ReactionFeedCard
-            key={r.id}
-            reaction={r}
-            isLoggedIn={isLoggedIn}
-            canPromote={canPromote && !r.parentReactionId}
-            canReply={Boolean(viewerBrandId) && r.brandId !== viewerBrandId}
-            muted={muted}
-            onToggleMute={onToggleMute}
-            onToggleLike={onToggleLike}
-            onReply={onReply}
-            onOpenComments={onOpenComments}
-            onShare={onShare}
-          />
-        ))}
+        {reactions.map((r, index) => {
+          if (Math.abs(index - activeIndex) > WINDOW) {
+            return <div key={r.id} className="relative h-dvh w-full snap-start snap-always bg-black" />;
+          }
+          return (
+            <ReactionFeedCard
+              key={r.id}
+              reaction={r}
+              isLoggedIn={isLoggedIn}
+              canPromote={canPromote && !r.parentReactionId}
+              canReply={Boolean(viewerBrandId) && r.brandId !== viewerBrandId}
+              muted={muted}
+              onToggleMute={onToggleMute}
+              onToggleLike={onToggleLike}
+              onReply={onReply}
+              onOpenComments={onOpenComments}
+              onShare={onShare}
+              onActive={() => handleActive(r.id)}
+            />
+          );
+        })}
       </div>
     </div>
   );

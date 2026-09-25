@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { FeedSoloPitchCard } from "@/components/feed/feed-solo-pitch-card";
 import { CommentSheet, type CommentTarget } from "@/components/feed/comment-sheet";
 import { ReactionsOverlay } from "@/components/pitches/reactions-overlay";
 import { BottomNav } from "@/components/nav/bottom-nav";
 import type { FeedSoloPitch } from "@/lib/feed";
+
+// Phase 44: this overlay mounted every single video in the list at once,
+// unbounded — the exact same "OS kills the app for memory" bug already
+// fixed in the main FeedClient (Phase 43), just never carried over here.
+// A brand with many videos + this being reachable straight from a profile
+// grid tile made it an easy way to reproduce that crash again. Same fix:
+// only mount cards within this many positions of the active one.
+const WINDOW = 2;
 
 /**
  * Phase 43: opened from a profile grid tile's "Videos" tab — Luca: tapping
@@ -39,6 +47,7 @@ export function StandaloneSoloPitchFeed({
   const [muted, setMuted] = useState(true);
   const [commentTarget, setCommentTarget] = useState<CommentTarget | null>(null);
   const [reactionsSoloPitchId, setReactionsSoloPitchId] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(startIndex);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -46,6 +55,16 @@ export function StandaloneSoloPitchFeed({
     if (el && startIndex > 0) el.scrollTop = startIndex * el.clientHeight;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleActive = useCallback(
+    (soloPitchId: string) => {
+      setActiveIndex((prev) => {
+        const idx = pitches.findIndex((p) => p.soloPitchId === soloPitchId);
+        return idx === -1 ? prev : idx;
+      });
+    },
+    [pitches],
+  );
 
   function patch(soloPitchId: string, p: Partial<FeedSoloPitch>) {
     setPitches((prev) => prev.map((x) => (x.soloPitchId === soloPitchId ? { ...x, ...p } : x)));
@@ -86,28 +105,39 @@ export function StandaloneSoloPitchFeed({
       </button>
 
       <div ref={scrollRef} className="h-[calc(100dvh-var(--bottom-nav-h))] w-full snap-y snap-mandatory overflow-y-scroll">
-        {pitches.map((pitch) => (
-          <FeedSoloPitchCard
-            key={pitch.soloPitchId}
-            pitch={pitch}
-            isLoggedIn={isLoggedIn}
-            viewerHasOtherBrand={Boolean(viewerBrandId && viewerBrandId !== pitch.brandId)}
-            muted={muted}
-            onToggleMute={() => setMuted((m) => !m)}
-            onToggleLike={handleToggleLike}
-            onOpenComments={(soloPitchId) => setCommentTarget({ kind: "solo", id: soloPitchId })}
-            onOpenReactions={setReactionsSoloPitchId}
-            onShare={handleShare}
-            onUpdated={(p) => {
-              patch(pitch.soloPitchId, p);
-              onPitchUpdated?.(pitch.soloPitchId, p);
-            }}
-            onDeleted={() => {
-              setPitches((prev) => prev.filter((p) => p.soloPitchId !== pitch.soloPitchId));
-              onPitchDeleted?.(pitch.soloPitchId);
-            }}
-          />
-        ))}
+        {pitches.map((pitch, index) => {
+          if (Math.abs(index - activeIndex) > WINDOW) {
+            return (
+              <div
+                key={pitch.soloPitchId}
+                className="relative h-[calc(100dvh-var(--bottom-nav-h))] w-full snap-start snap-always bg-black"
+              />
+            );
+          }
+          return (
+            <FeedSoloPitchCard
+              key={pitch.soloPitchId}
+              pitch={pitch}
+              isLoggedIn={isLoggedIn}
+              viewerHasOtherBrand={Boolean(viewerBrandId && viewerBrandId !== pitch.brandId)}
+              muted={muted}
+              onToggleMute={() => setMuted((m) => !m)}
+              onToggleLike={handleToggleLike}
+              onOpenComments={(soloPitchId) => setCommentTarget({ kind: "solo", id: soloPitchId })}
+              onOpenReactions={setReactionsSoloPitchId}
+              onShare={handleShare}
+              onUpdated={(p) => {
+                patch(pitch.soloPitchId, p);
+                onPitchUpdated?.(pitch.soloPitchId, p);
+              }}
+              onDeleted={() => {
+                setPitches((prev) => prev.filter((p) => p.soloPitchId !== pitch.soloPitchId));
+                onPitchDeleted?.(pitch.soloPitchId);
+              }}
+              onActive={() => handleActive(pitch.soloPitchId)}
+            />
+          );
+        })}
       </div>
 
       {commentTarget && (
