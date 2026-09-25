@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MoreVertical } from "lucide-react";
 import {
   deleteSoloPitch,
@@ -76,17 +77,22 @@ export function SoloPitchOwnerMenuButton({
         <MoreVertical size={28} />
       </button>
 
-      {screen !== "closed" && (
-        // Phase 43: z-[60], not z-50 — this button lives inside a card that
-        // can itself be shown inside StandaloneSoloPitchFeed's own z-50
-        // fixed overlay, which also renders its own local <BottomNav> (see
-        // that component's comment). Both this sheet and that nav are
-        // `position: fixed`, so they stack at the document root regardless
-        // of DOM nesting — at z-50 vs. BottomNav's z-20 they *should* still
-        // win, but Luca's report ("Bearbeiten/Löschen unsichtbar, klickt
-        // stattdessen die Tabs dahinter") says otherwise in practice. Same
-        // fix ReactionsOverlay already uses for the identical situation.
-        <div className="fixed inset-0 z-[60] flex items-end bg-black/60" onClick={() => setScreen("closed")}>
+      {screen !== "closed" &&
+        // Phase 43: a bumped z-index (z-50 -> z-[60]) wasn't actually
+        // enough — this button lives inside a card that can itself be shown
+        // inside StandaloneSoloPitchFeed's own fixed overlay, which also
+        // renders its own local <BottomNav>. Verified on real WebKit (iOS
+        // Simulator, not just the desktop browser this was first "fixed"
+        // in): the sheet *painted* on top correctly, but taps still landed
+        // on the video/BottomNav underneath — nested `position: fixed`
+        // elements don't reliably share one flat stacking order across
+        // engines, no z-index fixes that. A portal to `document.body`
+        // sidesteps it entirely: a real top-level DOM sibling of everything
+        // else, so paint and hit-testing finally agree, on every engine.
+        // Luca: "Bearbeiten/Löschen unsichtbar, klickt stattdessen die Tabs
+        // dahinter."
+        createPortal(
+          <div className="fixed inset-0 z-[60] flex items-end bg-black/60" onClick={() => setScreen("closed")}>
           <div
             className="w-full rounded-t-2xl bg-zinc-950 p-4 pb-[calc(env(safe-area-inset-bottom)+16px)]"
             onClick={(e) => e.stopPropagation()}
@@ -174,8 +180,9 @@ export function SoloPitchOwnerMenuButton({
               </div>
             )}
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </>
   );
 }
