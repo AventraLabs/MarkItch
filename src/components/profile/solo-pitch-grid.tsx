@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { StandaloneSoloPitchView } from "@/components/profile/standalone-solo-pitch-view";
+import { StandaloneSoloPitchFeed } from "@/components/profile/standalone-solo-pitch-feed";
 import type { FeedSoloPitch } from "@/lib/feed";
 
 // Phase 32: forces the browser to actually decode and show a frame instead
@@ -16,7 +16,12 @@ function showFirstFrame(video: HTMLVideoElement) {
 /**
  * Phase 30/32: a tile grid of muted video thumbnails — clicking one opens
  * the exact same full-screen FeedSoloPitchCard the main feed uses (Luca:
- * "muss genau gleich aussehen wie im Feed"), via StandaloneSoloPitchView.
+ * "muss genau gleich aussehen wie im Feed").
+ *
+ * Phase 43: used to open a single static post with no way onward (Luca:
+ * "kann nicht swipen sondern nur dieses eine Video schauen") — now opens
+ * StandaloneSoloPitchFeed, a real scrollable stack of every video in this
+ * grid landing on the tapped one, same fix as the Duelle tab got in Phase 40.
  */
 export function SoloPitchGrid({
   initialPitches,
@@ -28,16 +33,14 @@ export function SoloPitchGrid({
   viewerBrandId?: string | null;
 }) {
   const [pitches, setPitches] = useState(initialPitches);
-  const [openId, setOpenId] = useState<string | null>(null);
-
-  const openPitch = pitches.find((p) => p.soloPitchId === openId) ?? null;
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
     <>
       <ul className="grid grid-cols-3 gap-1">
-        {pitches.map((pitch) => (
+        {pitches.map((pitch, index) => (
           <li key={pitch.soloPitchId}>
-            <button onClick={() => setOpenId(pitch.soloPitchId)} className="block w-full">
+            <button onClick={() => setOpenIndex(index)} className="block w-full">
               <video
                 ref={(el) => {
                   if (el) showFirstFrame(el);
@@ -53,20 +56,17 @@ export function SoloPitchGrid({
         ))}
       </ul>
 
-      {openPitch && (
-        <StandaloneSoloPitchView
-          pitch={openPitch}
+      {openIndex !== null && (
+        <StandaloneSoloPitchFeed
+          pitches={pitches}
+          startIndex={openIndex}
           isLoggedIn={isLoggedIn}
-          viewerHasOtherBrand={Boolean(viewerBrandId && viewerBrandId !== openPitch.brandId)}
           viewerBrandId={viewerBrandId}
-          onClose={() => setOpenId(null)}
-          onUpdated={(patch) =>
-            setPitches((prev) => prev.map((p) => (p.soloPitchId === openPitch.soloPitchId ? { ...p, ...patch } : p)))
+          onClose={() => setOpenIndex(null)}
+          onPitchUpdated={(soloPitchId, patch) =>
+            setPitches((prev) => prev.map((p) => (p.soloPitchId === soloPitchId ? { ...p, ...patch } : p)))
           }
-          onDeleted={() => {
-            setPitches((prev) => prev.filter((p) => p.soloPitchId !== openPitch.soloPitchId));
-            setOpenId(null);
-          }}
+          onPitchDeleted={(soloPitchId) => setPitches((prev) => prev.filter((p) => p.soloPitchId !== soloPitchId))}
         />
       )}
     </>

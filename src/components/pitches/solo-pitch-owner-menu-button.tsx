@@ -78,7 +78,7 @@ export function SoloPitchOwnerMenuButton({
 
       {screen !== "closed" && (
         // Phase 43: z-[60], not z-50 — this button lives inside a card that
-        // can itself be shown inside StandaloneSoloPitchView's own z-50
+        // can itself be shown inside StandaloneSoloPitchFeed's own z-50
         // fixed overlay, which also renders its own local <BottomNav> (see
         // that component's comment). Both this sheet and that nav are
         // `position: fixed`, so they stack at the document root regardless
