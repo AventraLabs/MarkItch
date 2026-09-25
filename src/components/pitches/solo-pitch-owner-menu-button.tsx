@@ -77,7 +77,16 @@ export function SoloPitchOwnerMenuButton({
       </button>
 
       {screen !== "closed" && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/60" onClick={() => setScreen("closed")}>
+        // Phase 43: z-[60], not z-50 — this button lives inside a card that
+        // can itself be shown inside StandaloneSoloPitchView's own z-50
+        // fixed overlay, which also renders its own local <BottomNav> (see
+        // that component's comment). Both this sheet and that nav are
+        // `position: fixed`, so they stack at the document root regardless
+        // of DOM nesting — at z-50 vs. BottomNav's z-20 they *should* still
+        // win, but Luca's report ("Bearbeiten/Löschen unsichtbar, klickt
+        // stattdessen die Tabs dahinter") says otherwise in practice. Same
+        // fix ReactionsOverlay already uses for the identical situation.
+        <div className="fixed inset-0 z-[60] flex items-end bg-black/60" onClick={() => setScreen("closed")}>
           <div
             className="w-full rounded-t-2xl bg-zinc-950 p-4 pb-[calc(env(safe-area-inset-bottom)+16px)]"
             onClick={(e) => e.stopPropagation()}
