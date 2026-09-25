@@ -2,13 +2,16 @@
 
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { refresh } from "next/cache";
 import { db } from "@/db";
 import { brands, brandMembers, users } from "@/db/schema";
 import { requireUser } from "@/lib/session";
+import { getBrandForUser } from "@/lib/brand";
 import { uploadImage, ALLOWED_IMAGE_TYPES } from "@/lib/storage";
 import { CreateBrandSchema } from "@/lib/validation";
 
 export type BrandFormState = { errors?: Record<string, string[]> } | undefined;
+export type UpdateBrandFormState = { errors?: Record<string, string[]>; success?: boolean } | undefined;
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024; // 2 MB
 
@@ -101,4 +104,61 @@ export async function createBrand(_prevState: BrandFormState, formData: FormData
   await db.insert(brandMembers).values({ brandId: brand.id, userId: user.id, role: "owner" });
 
   redirect(`/brands/${brand.slug}`);
+}
+
+/**
+ * Phase 43: there was never any way to edit a brand's own name/description/
+ * category/website/logo after creating it — Luca noticed his profile shows
+ * "MarkItch" but Settings only let him change "Test" (the *account*'s own
+ * name, a completely different field). Reuses CreateBrandSchema — same
+ * rules should apply going in either direction. The slug (the `/brands/…`
+ * URL) deliberately never changes here, even on a rename — regenerating it
+ * would break every link/QR code/share already pointing at this brand.
+ */
+export async function updateBrand(_prevState: UpdateBrandFormState, formData: FormData): Promise<UpdateBrandFormState> {
+  const user = await requireUser();
+  const brand = await getBrandForUser(user.id);
+  if (!brand) {
+    return { errors: { _form: ["Du hast keine Marke."] } };
+  }
+
+  const parsed = CreateBrandSchema.safeParse({
+    name: formData.get("name"),
+    description: formData.get("description"),
+    website: formData.get("website"),
+    category: formData.get("category"),
+    country: formData.get("country"),
+  });
+  if (!parsed.success) {
+    return { errors: parsed.error.flatten().fieldErrors };
+  }
+
+  let logoUrl = brand.logoUrl;
+  const logoFile = formData.get("logo");
+  if (logoFile instanceof File && logoFile.size > 0) {
+    if (logoFile.size > MAX_LOGO_BYTES) {
+      return { errors: { logo: ["Logo darf maximal 2 MB groß sein."] } };
+    }
+    if (!ALLOWED_IMAGE_TYPES.includes(logoFile.type)) {
+      return { errors: { logo: ["Erlaubt: PNG, JPEG, WEBP oder SVG."] } };
+    }
+    const uploaded = await uploadImage(logoFile, "logos");
+    logoUrl = uploaded.url;
+  }
+
+  await db
+    .update(brands)
+    .set({
+      name: parsed.data.name,
+      description: parsed.data.description || null,
+      website: parsed.data.website || null,
+      category: parsed.data.category,
+      country: parsed.data.country,
+      logoUrl,
+      updatedAt: new Date(),
+    })
+    .where(eq(brands.id, brand.id));
+
+  refresh();
+  return { success: true };
 }

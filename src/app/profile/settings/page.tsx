@@ -10,6 +10,7 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { ResendVerificationButton } from "@/components/auth/resend-verification-button";
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
 import { EditProfileForm } from "@/components/auth/edit-profile-form";
+import { EditBrandForm } from "@/components/brand/edit-brand-form";
 import { DeleteAccountForm } from "@/components/auth/delete-account-form";
 import { IncomingChallengeList, OutgoingChallengeList } from "@/components/challenge/challenge-list";
 import { getIncomingChallenges, getOutgoingChallenges } from "@/lib/challenge";
@@ -70,6 +71,20 @@ export default async function ProfileSettingsPage() {
           </div>
         )}
       </div>
+
+      {brand && (
+        <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
+          <h2 className="mb-4 text-lg font-semibold text-white">Marke</h2>
+          <EditBrandForm
+            logoUrl={brand.logoUrl}
+            initialName={brand.name}
+            initialDescription={brand.description ?? ""}
+            initialCategory={brand.category}
+            initialCountry={brand.country}
+            initialWebsite={brand.website ?? ""}
+          />
+        </div>
+      )}
 
       {brand && (
         <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
