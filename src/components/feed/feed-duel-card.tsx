@@ -379,7 +379,7 @@ export function FeedDuelCard({
     <div
       ref={containerRef}
       data-battle-id={duel.battleId}
-      className="relative h-[calc(100dvh-var(--bottom-nav-h))] w-full snap-start snap-always bg-black"
+      className="relative h-[calc(100dvh-var(--bottom-nav-h))] w-full snap-start snap-always overflow-hidden bg-black"
     >
       {/* Phase 38: both sides sit side by side in one 200%-wide strip — the
           only way to actually *slide* between them (a `hidden` toggle can
