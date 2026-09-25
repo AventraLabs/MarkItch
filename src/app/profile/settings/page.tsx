@@ -92,7 +92,7 @@ export default async function ProfileSettingsPage() {
       )}
 
       {brand && (
-        <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
+        <div id="einladungen" className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6 scroll-mt-16">
           <h2 className="mb-4 text-lg font-semibold text-white">Einladungen</h2>
           <div className="mb-6">
             <h3 className="mb-2 text-sm font-medium text-zinc-400">Eingehend</h3>

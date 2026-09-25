@@ -5,10 +5,11 @@ import { refresh } from "next/cache";
 import { db } from "@/db";
 import { battles, challenges, soloPitches } from "@/db/schema";
 import { requireUser } from "@/lib/session";
-import { getBrandForUser } from "@/lib/brand";
+import { getBrandForUser, getBrandMemberUserIds } from "@/lib/brand";
 import { CHALLENGE_WINDOW_MS, effectiveStatus, getLivePendingChallengeBetween } from "@/lib/challenge";
 import { PITCH_CATEGORY, PRODUCTION_WINDOW_MS } from "@/lib/battle-format";
 import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
+import { getActorLabel, notifyUsers } from "@/lib/notification";
 
 export type ChallengeFormState = { error?: string } | undefined;
 
@@ -45,8 +46,29 @@ export async function sendChallenge(_prevState: ChallengeFormState, formData: Fo
     expiresAt: new Date(Date.now() + CHALLENGE_WINDOW_MS),
   });
 
+  await notifyChallenge(challengedBrandId, user.id);
+
   refresh();
   return undefined;
+}
+
+/**
+ * Phase 43: challenger and challenged brand's members never heard anything
+ * about an invitation at all — Luca: "die Info dass ich zum Duell
+ * eingeladen habe kommt beim anderen nicht an". Shared by both send paths
+ * (a plain profile challenge and "Pitch schicken" off a solo pitch).
+ */
+async function notifyChallenge(challengedBrandId: string, challengerUserId: string): Promise<void> {
+  const [memberIds, actor] = await Promise.all([
+    getBrandMemberUserIds(challengedBrandId),
+    getActorLabel(challengerUserId),
+  ]);
+  await notifyUsers(
+    memberIds,
+    `${actor.label} hat dich zu einem Duell herausgefordert.`,
+    "/profile/settings#einladungen",
+    challengerUserId,
+  );
 }
 
 /**
@@ -98,6 +120,46 @@ export async function sendChallengeFromSoloPitch(
     expiresAt: new Date(Date.now() + CHALLENGE_WINDOW_MS),
   });
 
+  await notifyChallenge(pitch.brandId, user.id);
+
+  refresh();
+  return undefined;
+}
+
+export type CancelFormState = { error?: string } | undefined;
+
+/** The challenger withdraws their own still-pending invitation. */
+export async function cancelChallenge(_prevState: CancelFormState, formData: FormData): Promise<CancelFormState> {
+  const user = await requireUser();
+  const challengeId = formData.get("challengeId");
+  if (typeof challengeId !== "string" || !challengeId) {
+    return { error: "Ungültige Anfrage." };
+  }
+
+  const myBrand = await getBrandForUser(user.id);
+  if (!myBrand) {
+    return { error: "Du hast keine Marke." };
+  }
+
+  const [challenge] = await db.select().from(challenges).where(eq(challenges.id, challengeId)).limit(1);
+  if (!challenge || challenge.challengerBrandId !== myBrand.id) {
+    return { error: "Diese Einladung existiert nicht für deine Marke." };
+  }
+  if (effectiveStatus(challenge) !== "pending") {
+    return { error: "Diese Einladung ist nicht mehr offen." };
+  }
+
+  await db
+    .update(challenges)
+    .set({ status: "cancelled", respondedAt: new Date() })
+    .where(eq(challenges.id, challengeId));
+
+  const [challengedMemberIds, actor] = await Promise.all([
+    getBrandMemberUserIds(challenge.challengedBrandId),
+    getActorLabel(user.id),
+  ]);
+  await notifyUsers(challengedMemberIds, `${actor.label} hat die Duell-Einladung zurückgezogen.`, null, user.id);
+
   refresh();
   return undefined;
 }
@@ -138,6 +200,11 @@ export async function respondToChallenge(_prevState: RespondFormState, formData:
     .set({ status: decision === "accept" ? "accepted" : "declined", respondedAt: new Date() })
     .where(eq(challenges.id, challengeId));
 
+  const [challengerMemberIds, actor] = await Promise.all([
+    getBrandMemberUserIds(challenge.challengerBrandId),
+    getActorLabel(user.id),
+  ]);
+
   // Phase 7: accepting a challenge creates the battle row right away, but
   // it starts in "awaiting_videos" — no videos yet, nothing votable, nobody
   // notified. Both brands now have PRODUCTION_WINDOW_MS to each upload
@@ -161,15 +228,32 @@ export async function respondToChallenge(_prevState: RespondFormState, formData:
         prefilledBrandBVideo = { brandBVideoUrl: pitch.videoUrl, brandBSubmittedAt: pitch.createdAt };
       }
     }
-    await db.insert(battles).values({
-      challengeId: challenge.id,
-      brandAId: challenge.challengerBrandId,
-      brandBId: challenge.challengedBrandId,
-      mode: "scheduled",
-      category: PITCH_CATEGORY,
-      productionDeadline: new Date(Date.now() + PRODUCTION_WINDOW_MS),
-      ...prefilledBrandBVideo,
-    });
+    const [battle] = await db
+      .insert(battles)
+      .values({
+        challengeId: challenge.id,
+        brandAId: challenge.challengerBrandId,
+        brandBId: challenge.challengedBrandId,
+        mode: "scheduled",
+        category: PITCH_CATEGORY,
+        productionDeadline: new Date(Date.now() + PRODUCTION_WINDOW_MS),
+        ...prefilledBrandBVideo,
+      })
+      .returning({ id: battles.id });
+
+    await notifyUsers(
+      challengerMemberIds,
+      `${actor.label} hat deine Duell-Einladung angenommen — jetzt dein Video hochladen!`,
+      `/pitches/${battle.id}`,
+      user.id,
+    );
+  } else {
+    await notifyUsers(
+      challengerMemberIds,
+      `${actor.label} hat deine Duell-Einladung abgelehnt.`,
+      "/profile/settings#einladungen",
+      user.id,
+    );
   }
 
   refresh();

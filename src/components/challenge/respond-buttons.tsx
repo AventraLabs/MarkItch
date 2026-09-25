@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { respondToChallenge, type RespondFormState } from "@/app/actions/challenge";
+import { respondToChallenge, cancelChallenge, type RespondFormState, type CancelFormState } from "@/app/actions/challenge";
 import { useFormStatus } from "react-dom";
 
 function TinyButton({ children, tone }: { children: string; tone: "accept" | "decline" }) {
@@ -41,5 +41,17 @@ export function RespondButtons({ challengeId }: { challengeId: string }) {
       </div>
       {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
     </div>
+  );
+}
+
+/** The challenger's side of a still-pending outgoing invitation — withdraw it. */
+export function CancelChallengeButton({ challengeId }: { challengeId: string }) {
+  const [state, action] = useActionState<CancelFormState, FormData>(cancelChallenge, undefined);
+  return (
+    <form action={action}>
+      <input type="hidden" name="challengeId" value={challengeId} />
+      <TinyButton tone="decline">Zurückziehen</TinyButton>
+      {state?.error && <p className="mt-2 text-sm text-red-400">{state.error}</p>}
+    </form>
   );
 }

@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { effectiveStatus, type ChallengeWithBrand } from "@/lib/challenge";
-import { RespondButtons } from "@/components/challenge/respond-buttons";
+import { RespondButtons, CancelChallengeButton } from "@/components/challenge/respond-buttons";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Wartet auf Antwort",
   accepted: "Angenommen",
   declined: "Abgelehnt",
   expired: "Abgelaufen",
+  cancelled: "Zurückgezogen",
 };
 
 const STATUS_CLASS: Record<string, string> = {
@@ -14,6 +15,7 @@ const STATUS_CLASS: Record<string, string> = {
   accepted: "bg-green-500/10 text-green-400",
   declined: "bg-zinc-800 text-zinc-400",
   expired: "bg-zinc-800 text-zinc-500",
+  cancelled: "bg-zinc-800 text-zinc-500",
 };
 
 function StatusBadge({ status, battleId }: { status: string; battleId?: string | null }) {
@@ -103,6 +105,7 @@ export function OutgoingChallengeList({ challenges }: { challenges: ChallengeWit
               <StatusBadge status={status} battleId={c.battleId} />
               {status === "pending" && <p className="mt-1 text-xs text-zinc-500">{timeLeftLabel(c.expiresAt)}</p>}
             </div>
+            {status === "pending" && <CancelChallengeButton challengeId={c.id} />}
           </li>
         );
       })}
