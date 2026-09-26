@@ -2,6 +2,7 @@ import "server-only";
 import { and, count, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { partnerCastings, castingSubmissions, castingVotes, brands, brandMembers, type PartnerCasting } from "@/db/schema";
+import { getAutoHiddenTargetIds } from "@/lib/moderation";
 
 // Phase 19: same "starting assumption, not measured" spirit as
 // PRODUCTION_WINDOW_MS/VOTING_WINDOW_MS in battle-format.ts. Submissions
@@ -81,12 +82,17 @@ export async function getCastingById(id: string, viewerId: string | null): Promi
   const [hostBrand] = await db.select(brandCols).from(brands).where(eq(brands.id, casting.hostBrandId)).limit(1);
   if (!hostBrand) return null;
 
-  const submissionRows = await db
-    .select({ submission: castingSubmissions, brand: brandCols })
-    .from(castingSubmissions)
-    .innerJoin(brands, eq(castingSubmissions.brandId, brands.id))
-    .where(eq(castingSubmissions.castingId, id))
-    .orderBy(desc(castingSubmissions.createdAt));
+  const [allSubmissionRows, autoHiddenIds] = await Promise.all([
+    db
+      .select({ submission: castingSubmissions, brand: brandCols })
+      .from(castingSubmissions)
+      .innerJoin(brands, eq(castingSubmissions.brandId, brands.id))
+      .where(eq(castingSubmissions.castingId, id))
+      .orderBy(desc(castingSubmissions.createdAt)),
+    getAutoHiddenTargetIds(["casting_submission"]),
+  ]);
+  // Phase 46: siehe buildFeedDuels in feed.ts — mehrere unterschiedliche Meldende → automatisch pausiert.
+  const submissionRows = allSubmissionRows.filter((r) => !autoHiddenIds.has(r.submission.id));
 
   const voteRows = await db
     .select({ submissionId: castingVotes.submissionId, n: count() })

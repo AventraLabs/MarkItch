@@ -13,6 +13,7 @@ import { getAllSoloPitches } from "@/lib/solo-pitch";
 import { getReactionCounts } from "@/lib/reaction";
 import { getActiveBoostedSoloPitchIds } from "@/lib/boost";
 import { getViewCountsForSoloPitches, getViewCountsForBattles } from "@/lib/analytics";
+import { getAutoHiddenTargetIds } from "@/lib/moderation";
 
 // Phase 9.1 — one feed entry per Duell (battle), not per side.
 //
@@ -73,8 +74,15 @@ export type FeedDuel = {
 };
 
 async function buildFeedDuels(viewerId: string | null): Promise<FeedDuel[]> {
-  const allBattles = await getAllBattles();
+  const [allBattles, autoHiddenBattleIds] = await Promise.all([
+    getAllBattles(),
+    getAutoHiddenTargetIds(["battle_a", "battle_b"]),
+  ]);
   const eligible = allBattles.filter((battle) => {
+    // Phase 46: mehrere unterschiedliche Meldende → automatisch pausiert
+    // bis zur Überprüfung (Rechtskonformitäts-Audit) — siehe
+    // getAutoHiddenTargetIds für die Begründung.
+    if (autoHiddenBattleIds.has(battle.id)) return false;
     const { videoUrlA, videoUrlB } = resolveBattleVideos(battle);
     const stage = getBattleStage({
       brandAId: battle.brandAId,
@@ -275,7 +283,9 @@ export type FeedSoloPitch = {
 export type FeedItem = FeedDuel | FeedSoloPitch;
 
 async function buildFeedSoloPitches(viewerId: string | null): Promise<FeedSoloPitch[]> {
-  const pitches = await getAllSoloPitches();
+  const [allPitches, autoHiddenIds] = await Promise.all([getAllSoloPitches(), getAutoHiddenTargetIds(["solo_pitch"])]);
+  // Phase 46: siehe buildFeedDuels — mehrere unterschiedliche Meldende → automatisch pausiert.
+  const pitches = allPitches.filter((p) => !autoHiddenIds.has(p.id));
   if (pitches.length === 0) return [];
 
   const ids = pitches.map((p) => p.id);

@@ -1,5 +1,5 @@
 import "server-only";
-import { desc, eq, isNotNull } from "drizzle-orm";
+import { and, countDistinct, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { requireUser } from "@/lib/session";
@@ -99,6 +99,39 @@ export async function submitReport(input: {
     note,
   });
   return { ok: true };
+}
+
+// Phase 46: Rechtskonformitäts-Audit — die PDF verlangt, gemeldete Inhalte
+// automatisch bis zur Überprüfung zu pausieren. Ein einzelner Report reicht
+// dafür nicht (Missbrauchsrisiko: Konkurrenz meldet massenhaft, um fremden
+// Content offline zu nehmen) — erst ab mehreren *unterschiedlichen*
+// Meldenden gilt ein Inhalt als pausiert. Bewusst zur Lesezeit berechnet,
+// nicht als Spalte gespeichert (gleiche Philosophie wie effectiveStatus()
+// in challenge.ts) — sobald ein Admin genug der offenen Reports auflöst,
+// taucht der Inhalt beim nächsten Laden von selbst wieder auf, ohne eigene
+// "un-hide"-Logik.
+export const AUTO_HIDE_REPORT_THRESHOLD = 3;
+
+/**
+ * IDs, die für einen oder mehrere targetTypes mindestens
+ * AUTO_HIDE_REPORT_THRESHOLD offene Meldungen von unterschiedlichen Nutzern
+ * haben — von den aufrufenden Feed-/Listen-Abfragen herausgefiltert.
+ * 'battle_a'/'battle_b' werden zusammen übergeben, weil beide auf dieselbe
+ * battles-Zeile zeigen (siehe ReportTargetType-Kommentar oben) — ein Duell
+ * mit insgesamt genug Meldungen über beide Seiten hinweg verschwindet als
+ * Ganzes, nicht nur eine Seite davon.
+ */
+export async function getAutoHiddenTargetIds(
+  targetTypes: ReportTargetType[],
+  minDistinctReporters = AUTO_HIDE_REPORT_THRESHOLD,
+): Promise<Set<string>> {
+  const rows = await db
+    .select({ targetId: reports.targetId, n: countDistinct(reports.reporterUserId) })
+    .from(reports)
+    .where(and(inArray(reports.targetType, targetTypes), eq(reports.status, "open")))
+    .groupBy(reports.targetId)
+    .having(sql`count(distinct ${reports.reporterUserId}) >= ${minDistinctReporters}`);
+  return new Set(rows.map((r) => r.targetId));
 }
 
 export type ReportedOwner = { userId: string; email: string };

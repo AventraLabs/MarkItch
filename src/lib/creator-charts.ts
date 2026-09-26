@@ -2,6 +2,7 @@ import "server-only";
 import { and, count, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { creatorSubmissions, creatorVotes, brands, brandMembers } from "@/db/schema";
+import { getAutoHiddenTargetIds } from "@/lib/moderation";
 
 /** "YYYY-MM" — the calendar month IS the round, nothing to schedule. */
 export function currentPeriod(): string {
@@ -35,12 +36,17 @@ export async function getChartForBrand(
   period: string,
   viewerId: string | null,
 ): Promise<{ entries: CreatorChartEntry[]; viewerVotedSubmissionId: string | null }> {
-  const rows = await db
-    .select({ submission: creatorSubmissions, creator: brandCols })
-    .from(creatorSubmissions)
-    .innerJoin(brands, eq(creatorSubmissions.creatorBrandId, brands.id))
-    .where(and(eq(creatorSubmissions.brandId, brandId), eq(creatorSubmissions.period, period)))
-    .orderBy(desc(creatorSubmissions.createdAt));
+  const [allRows, autoHiddenIds] = await Promise.all([
+    db
+      .select({ submission: creatorSubmissions, creator: brandCols })
+      .from(creatorSubmissions)
+      .innerJoin(brands, eq(creatorSubmissions.creatorBrandId, brands.id))
+      .where(and(eq(creatorSubmissions.brandId, brandId), eq(creatorSubmissions.period, period)))
+      .orderBy(desc(creatorSubmissions.createdAt)),
+    getAutoHiddenTargetIds(["creator_submission"]),
+  ]);
+  // Phase 46: siehe buildFeedDuels in feed.ts — mehrere unterschiedliche Meldende → automatisch pausiert.
+  const rows = allRows.filter((r) => !autoHiddenIds.has(r.submission.id));
 
   if (rows.length === 0) return { entries: [], viewerVotedSubmissionId: null };
 
