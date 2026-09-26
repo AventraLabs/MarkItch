@@ -1,19 +1,25 @@
 // Phase 44: Luca — "bau eine Kategorie Auswahl für Duelle, auch sowas wie
-// mache einen One Take, und noch viele andere Ideen." First attempt missed
-// the point (Luca: "keine einzige von deinen finde ich gut") — these are
-// supposed to be constraints on *how the ad itself is made/looks*, like
-// "One Take", not marketing tactics like "zeig eine Kundenreaktion". This
-// list only has that one kind of entry now. Still a starter list, not a
-// final one — add/remove/reword entries freely, nothing else needs to
-// change (challenge.ts validates against this array, and every display
-// spot just prints whatever string ended up stored per-row).
+// mache einen One Take, und noch viele andere Ideen." Two misses before
+// this landed: attempt 1 mixed in marketing tactics ("zeig eine
+// Kundenreaktion") instead of production style; attempt 2 was camera-
+// technique jargon (POV, Gimbal, Split-Screen) — "falsche Ebene" and "zu
+// kompliziert umzusetzen" for a small brand with just a phone. What Luca
+// actually wants, his own examples: "mache einen 1-Minuten-Pitch", "im
+// Stil eines Kinofilms", "als Comic" — a creative genre/format prompt
+// anyone can interpret with no special gear, not a technical constraint.
+// Still a starter list, not a final one — add/remove/reword entries
+// freely, nothing else needs to change (challenge.ts validates against
+// this array, and every display spot just prints whatever string ended up
+// stored per-row).
 export const DUEL_CATEGORIES = [
   "Verkaufe dein Produkt oder deine Leistung in 15 Sekunden",
   "One Take — kein Schnitt, eine durchgehende Einstellung",
-  "Nur Handkamera — kein Stativ, kein Gimbal",
-  "Ohne Worte — nur Bild & Musik",
-  "POV — aus der Ich-Perspektive gefilmt",
-  "Split-Screen — zwei Bilder gleichzeitig",
+  "Mache einen 1-Minuten-Pitch",
+  "Im Stil eines Kinofilms",
+  "Im Comic-Stil",
+  "Wie eine 90er-Werbung",
+  "Wie ein Musikvideo",
+  "Wie eine Nachrichtensendung",
 ] as const;
 
 export type DuelCategory = (typeof DUEL_CATEGORIES)[number];
