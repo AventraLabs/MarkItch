@@ -68,7 +68,16 @@ export async function postCreatorVideo(
     return { errors: { _form: [RATE_LIMIT_MESSAGE] } };
   }
 
-  const result = await postCreatorSubmission(myBrand.id, targetBrandId, video.videoUrl, description, cta.ctaLabel, cta.ctaUrl);
+  const containsAiContent = formData.get("containsAiContent") === "on";
+  const result = await postCreatorSubmission(
+    myBrand.id,
+    targetBrandId,
+    video.videoUrl,
+    description,
+    cta.ctaLabel,
+    cta.ctaUrl,
+    containsAiContent,
+  );
   if (result.error) return { errors: { _form: [result.error] } };
 
   refresh();

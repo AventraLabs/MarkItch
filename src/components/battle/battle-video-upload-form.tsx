@@ -6,6 +6,7 @@ import { FormError, SubmitButton } from "@/components/ui";
 import { VideoPickerInput } from "@/components/video-picker-input";
 import { CtaLinkFields } from "@/components/pitches/cta-link-fields";
 import { AudioRightsCheckbox } from "@/components/pitches/audio-rights-checkbox";
+import { AiContentCheckbox } from "@/components/pitches/ai-content-checkbox";
 
 export function BattleVideoUploadForm({ battleId }: { battleId: string }) {
   const [state, action] = useActionState<UploadBattleVideoFormState, FormData>(uploadBattleVideo, undefined);
@@ -44,6 +45,7 @@ export function BattleVideoUploadForm({ battleId }: { battleId: string }) {
       />
       <CtaLinkFields ctaLabel={ctaLabel} ctaUrl={ctaUrl} onCtaLabelChange={setCtaLabel} onCtaUrlChange={setCtaUrl} />
       <AudioRightsCheckbox />
+      <AiContentCheckbox />
       <SubmitButton>Dein Video hochladen</SubmitButton>
     </form>
   );

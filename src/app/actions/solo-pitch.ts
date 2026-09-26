@@ -78,6 +78,7 @@ export async function postSoloPitch(_prevState: SoloPitchFormState, formData: Fo
       description: description.description,
       ctaLabel: cta.ctaLabel,
       ctaUrl: cta.ctaUrl,
+      containsAiContent: formData.get("containsAiContent") === "on",
     })
     .returning({ id: soloPitches.id });
 

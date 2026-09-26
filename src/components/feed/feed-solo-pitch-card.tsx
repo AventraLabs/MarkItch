@@ -8,7 +8,7 @@ import { PitchChallengeButton } from "@/components/pitches/pitch-challenge-butto
 import { BoostButton } from "@/components/pitches/boost-button";
 import { ReportButton } from "@/components/moderation/report-button";
 import { SoloPitchOwnerMenuButton } from "@/components/pitches/solo-pitch-owner-menu-button";
-import { AdLabel } from "@/components/ui";
+import { AdLabel, AiContentLabel } from "@/components/ui";
 import type { FeedSoloPitch } from "@/lib/feed";
 import { trackAnalyticsEvent } from "@/lib/analytics-client";
 
@@ -192,6 +192,7 @@ export function FeedSoloPitchCard({
           )}
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-zinc-300">Solo-Pitch</span>
           <AdLabel />
+          {pitch.containsAiContent && <AiContentLabel />}
           <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400">
             <Eye size={11} /> {pitch.viewCount}
           </span>

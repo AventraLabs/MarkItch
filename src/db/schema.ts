@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, uniqueIndex, index, integer, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, uniqueIndex, index, integer, boolean, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // Phase 1: just what real authentication needs.
@@ -221,6 +221,10 @@ export const battles = pgTable(
     brandACtaUrl: text("brand_a_cta_url"),
     brandBCtaLabel: text("brand_b_cta_label"),
     brandBCtaUrl: text("brand_b_cta_url"),
+    // Phase 46: siehe soloPitches.containsAiContent — per Seite, nicht pro
+    // Duell, da jede Seite ihr Video unabhängig hochlädt.
+    brandAContainsAiContent: boolean("brand_a_contains_ai_content").notNull().default(false),
+    brandBContainsAiContent: boolean("brand_b_contains_ai_content").notNull().default(false),
     brandASubmittedAt: timestamp("brand_a_submitted_at", { withTimezone: true }),
     brandBSubmittedAt: timestamp("brand_b_submitted_at", { withTimezone: true }),
     productionDeadline: timestamp("production_deadline", { withTimezone: true }),
@@ -455,6 +459,12 @@ export const soloPitches = pgTable("solo_pitches", {
   // Phase 27: Call-to-Action — see the matching comment on battles above.
   ctaLabel: text("cta_label"),
   ctaUrl: text("cta_url"),
+  // Phase 46: EU-AI-Act-Kennzeichnungspflicht (Rechtskonformitäts-Audit) —
+  // ein Upload-Schalter, kein automatischer Scan. Default false statt
+  // nullable, weil "keine Angabe" hier praktisch dasselbe bedeutet wie
+  // "nein" — ein Pflichtfeld hätte jeden bestehenden Upload-Flow für ein
+  // Rand-Feature verkompliziert.
+  containsAiContent: boolean("contains_ai_content").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -491,6 +501,8 @@ export const reactions = pgTable(
     parentReactionId: uuid("parent_reaction_id").references((): AnyPgColumn => reactions.id, { onDelete: "cascade" }),
     videoUrl: text("video_url").notNull(),
     promotedToBattleId: uuid("promoted_to_battle_id").references(() => battles.id, { onDelete: "set null" }),
+    // Phase 46: siehe soloPitches.containsAiContent.
+    containsAiContent: boolean("contains_ai_content").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -606,6 +618,8 @@ export const castingSubmissions = pgTable(
     description: text("description"),
     ctaLabel: text("cta_label"),
     ctaUrl: text("cta_url"),
+    // Phase 46: siehe soloPitches.containsAiContent.
+    containsAiContent: boolean("contains_ai_content").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex("casting_submissions_casting_brand_unique_idx").on(table.castingId, table.brandId)],
@@ -667,6 +681,8 @@ export const creatorSubmissions = pgTable("creator_submissions", {
   description: text("description"),
   ctaLabel: text("cta_label"),
   ctaUrl: text("cta_url"),
+  // Phase 46: siehe soloPitches.containsAiContent.
+  containsAiContent: boolean("contains_ai_content").notNull().default(false),
   period: text("period").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

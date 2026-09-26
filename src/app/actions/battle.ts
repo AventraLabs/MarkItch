@@ -72,12 +72,26 @@ export async function uploadBattleVideo(
 
   const now = new Date();
 
+  const containsAiContent = formData.get("containsAiContent") === "on";
+
   await db
     .update(battles)
     .set(
       isA
-        ? { brandAVideoUrl: video.videoUrl, brandASubmittedAt: now, brandACtaLabel: cta.ctaLabel, brandACtaUrl: cta.ctaUrl }
-        : { brandBVideoUrl: video.videoUrl, brandBSubmittedAt: now, brandBCtaLabel: cta.ctaLabel, brandBCtaUrl: cta.ctaUrl },
+        ? {
+            brandAVideoUrl: video.videoUrl,
+            brandASubmittedAt: now,
+            brandACtaLabel: cta.ctaLabel,
+            brandACtaUrl: cta.ctaUrl,
+            brandAContainsAiContent: containsAiContent,
+          }
+        : {
+            brandBVideoUrl: video.videoUrl,
+            brandBSubmittedAt: now,
+            brandBCtaLabel: cta.ctaLabel,
+            brandBCtaUrl: cta.ctaUrl,
+            brandBContainsAiContent: containsAiContent,
+          },
     )
     .where(eq(battles.id, battleId));
 

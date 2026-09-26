@@ -90,7 +90,13 @@ export async function postReaction(_prevState: ReactionFormState, formData: Form
     return { error: Object.values(audioRights.error.flatten().fieldErrors)[0]![0] };
   }
 
-  await db.insert(reactions).values({ soloPitchId, parentReactionId, brandId: myBrand.id, videoUrl: video.videoUrl });
+  await db.insert(reactions).values({
+    soloPitchId,
+    parentReactionId,
+    brandId: myBrand.id,
+    videoUrl: video.videoUrl,
+    containsAiContent: formData.get("containsAiContent") === "on",
+  });
 
   refresh();
   return undefined;

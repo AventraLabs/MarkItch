@@ -101,7 +101,8 @@ export async function submitCastingEntry(
     return { error: RATE_LIMIT_MESSAGE };
   }
 
-  const result = await submitToCasting(castingId, myBrand.id, video.videoUrl, description, cta.ctaLabel, cta.ctaUrl);
+  const containsAiContent = formData.get("containsAiContent") === "on";
+  const result = await submitToCasting(castingId, myBrand.id, video.videoUrl, description, cta.ctaLabel, cta.ctaUrl, containsAiContent);
   if (result.error) return { error: result.error };
 
   refresh();

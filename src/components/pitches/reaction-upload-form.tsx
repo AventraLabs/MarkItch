@@ -5,6 +5,7 @@ import { postReaction, type ReactionFormState } from "@/app/actions/reaction";
 import { FormError, SubmitButton } from "@/components/ui";
 import { VideoPickerInput } from "@/components/video-picker-input";
 import { AudioRightsCheckbox } from "@/components/pitches/audio-rights-checkbox";
+import { AiContentCheckbox } from "@/components/pitches/ai-content-checkbox";
 
 export function ReactionUploadForm({
   soloPitchId,
@@ -61,6 +62,7 @@ export function ReactionUploadForm({
         }}
       />
       <AudioRightsCheckbox />
+      <AiContentCheckbox />
       <SubmitButton>{parentReactionId ? "Antwort posten" : "Reaktion posten"}</SubmitButton>
     </form>
   );

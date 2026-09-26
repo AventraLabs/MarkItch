@@ -6,6 +6,7 @@ import { FormError, SubmitButton } from "@/components/ui";
 import { VideoPickerInput } from "@/components/video-picker-input";
 import { CtaLinkFields } from "@/components/pitches/cta-link-fields";
 import { AudioRightsCheckbox } from "@/components/pitches/audio-rights-checkbox";
+import { AiContentCheckbox } from "@/components/pitches/ai-content-checkbox";
 
 export function SoloPitchUploadForm() {
   const [state, action] = useActionState<SoloPitchFormState, FormData>(postSoloPitch, undefined);
@@ -71,6 +72,7 @@ export function SoloPitchUploadForm() {
         onCtaUrlChange={setCtaUrl}
       />
       <AudioRightsCheckbox errors={state?.errors} />
+      <AiContentCheckbox />
       <SubmitButton>Solo-Pitch posten</SubmitButton>
     </form>
   );

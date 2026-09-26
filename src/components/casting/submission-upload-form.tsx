@@ -6,6 +6,7 @@ import { FormError, SubmitButton } from "@/components/ui";
 import { VideoPickerInput } from "@/components/video-picker-input";
 import { CtaLinkFields } from "@/components/pitches/cta-link-fields";
 import { AudioRightsCheckbox } from "@/components/pitches/audio-rights-checkbox";
+import { AiContentCheckbox } from "@/components/pitches/ai-content-checkbox";
 
 export function SubmissionUploadForm({ castingId }: { castingId: string }) {
   const [state, action] = useActionState<SubmitCastingFormState, FormData>(submitCastingEntry, undefined);
@@ -58,6 +59,7 @@ export function SubmissionUploadForm({ castingId }: { castingId: string }) {
       />
       <CtaLinkFields ctaLabel={ctaLabel} ctaUrl={ctaUrl} onCtaLabelChange={setCtaLabel} onCtaUrlChange={setCtaUrl} />
       <AudioRightsCheckbox />
+      <AiContentCheckbox />
       <SubmitButton>Video einreichen</SubmitButton>
     </form>
   );

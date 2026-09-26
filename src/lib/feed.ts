@@ -42,6 +42,8 @@ export type FeedDuelSide = {
   /** Phase 27: null for content posted before this existed — no fallback here (unlike the counter-flow's reused profile video), a video-upload's own CTA is the real thing. */
   ctaLabel: string | null;
   ctaUrl: string | null;
+  /** Phase 46: EU-AI-Act-Kennzeichnungspflicht. */
+  containsAiContent: boolean;
 };
 
 export type FeedDuel = {
@@ -176,6 +178,7 @@ async function buildFeedDuels(viewerId: string | null): Promise<FeedDuel[]> {
     // (see counterWithVideo) is expected to actually need the fallback.
     const ctaLabels = [battle.brandACtaLabel, battle.brandBCtaLabel];
     const ctaUrls = [battle.brandACtaUrl ?? battle.brandA.website, battle.brandBCtaUrl ?? battle.brandB.website];
+    const aiContentFlags = [battle.brandAContainsAiContent, battle.brandBContainsAiContent];
     const sides = rawSides.map((brand, i): FeedDuelSide => {
       const key = `${battle.id}:${brand.id}`;
       return {
@@ -190,6 +193,7 @@ async function buildFeedDuels(viewerId: string | null): Promise<FeedDuel[]> {
         viewerFollowsBrand: followedSet.has(brand.id),
         ctaLabel: ctaLabels[i] ?? (ctaUrls[i] ? "Zur Website" : null),
         ctaUrl: ctaUrls[i],
+        containsAiContent: aiContentFlags[i]!,
       };
     }) as [FeedDuelSide, FeedDuelSide];
 
@@ -278,6 +282,8 @@ export type FeedSoloPitch = {
   /** Phase 27: null only for content posted before this existed. */
   ctaLabel: string | null;
   ctaUrl: string | null;
+  /** Phase 46: EU-AI-Act-Kennzeichnungspflicht. */
+  containsAiContent: boolean;
 };
 
 export type FeedItem = FeedDuel | FeedSoloPitch;
@@ -324,6 +330,7 @@ async function buildFeedSoloPitches(viewerId: string | null): Promise<FeedSoloPi
     boosted: boostedIds.has(pitch.id),
     ctaLabel: pitch.ctaLabel,
     ctaUrl: pitch.ctaUrl,
+    containsAiContent: pitch.containsAiContent,
   }));
 }
 

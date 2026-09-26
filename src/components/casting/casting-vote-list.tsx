@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CastingSubmissionWithBrand } from "@/lib/casting";
 import { ReportButton } from "@/components/moderation/report-button";
-import { AdLabel } from "@/components/ui";
+import { AdLabel, AiContentLabel } from "@/components/ui";
 
 export function CastingVoteList({
   castingId,
@@ -72,6 +72,7 @@ export function CastingVoteList({
                   {s.brandName}
                 </Link>
                 <AdLabel />
+                {s.containsAiContent && <AiContentLabel />}
               </div>
               {isWinner && <span className="text-xs font-semibold text-orange-400">🏆 Partner</span>}
             </div>

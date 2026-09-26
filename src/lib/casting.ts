@@ -64,6 +64,7 @@ export type CastingSubmissionWithBrand = {
   ctaLabel: string | null;
   ctaUrl: string | null;
   voteCount: number;
+  containsAiContent: boolean;
 };
 
 export type CastingWithDetails = PartnerCasting & {
@@ -126,6 +127,7 @@ export async function getCastingById(id: string, viewerId: string | null): Promi
       ctaLabel: r.submission.ctaLabel,
       ctaUrl: r.submission.ctaUrl,
       voteCount: tally.get(r.submission.id) ?? 0,
+      containsAiContent: r.submission.containsAiContent,
     })),
     stage,
     viewerVotedSubmissionId: viewerVote[0]?.submissionId ?? null,
@@ -194,6 +196,7 @@ export async function submitToCasting(
   description: string,
   ctaLabel: string,
   ctaUrl: string,
+  containsAiContent: boolean,
 ): Promise<{ error?: string }> {
   const [casting] = await db.select().from(partnerCastings).where(eq(partnerCastings.id, castingId)).limit(1);
   if (!casting) return { error: "Dieses Casting existiert nicht." };
@@ -207,7 +210,7 @@ export async function submitToCasting(
     .limit(1);
   if (existing) return { error: "Du hast für dieses Casting bereits eingereicht." };
 
-  await db.insert(castingSubmissions).values({ castingId, brandId, videoUrl, description, ctaLabel, ctaUrl });
+  await db.insert(castingSubmissions).values({ castingId, brandId, videoUrl, description, ctaLabel, ctaUrl, containsAiContent });
   return {};
 }
 

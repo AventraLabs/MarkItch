@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CreatorChartEntry } from "@/lib/creator-charts";
 import { ReportButton } from "@/components/moderation/report-button";
-import { AdLabel } from "@/components/ui";
+import { AdLabel, AiContentLabel } from "@/components/ui";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
@@ -73,6 +73,7 @@ export function CreatorChartList({
             </Link>
             <div className="flex items-center gap-2">
               <AdLabel />
+              {e.containsAiContent && <AiContentLabel />}
               <span className="text-xs text-zinc-500">
                 {e.voteCount} {e.voteCount === 1 ? "Stimme" : "Stimmen"}
               </span>
