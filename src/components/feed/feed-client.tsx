@@ -296,13 +296,16 @@ export function FeedClient({
     // and bounces a human visitor onward to wherever the Duell actually
     // lives (feed or waiting room) if it isn't a finished result.
     shareUrl(
-      `${window.location.origin}/battles/${duel.battleId}`,
+      `${window.location.origin}/battles/${duel.battleId}?ref=battle:${duel.battleId}`,
       `${duel.sides[0].brandName} vs. ${duel.sides[1].brandName} auf MarkItch`,
     );
   }
 
   function handleShareSolo(pitch: FeedSoloPitch) {
-    shareUrl(`${window.location.origin}/?pitch=${pitch.soloPitchId}`, `${pitch.brandName} auf MarkItch`);
+    shareUrl(
+      `${window.location.origin}/?pitch=${pitch.soloPitchId}&ref=solo:${pitch.soloPitchId}`,
+      `${pitch.brandName} auf MarkItch`,
+    );
   }
 
   async function handleToggleLikeSolo(pitch: FeedSoloPitch) {

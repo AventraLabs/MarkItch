@@ -5,6 +5,7 @@ import { getUnreadNotificationCount } from "@/lib/notification";
 import { BottomNav } from "@/components/nav/bottom-nav";
 import { NotificationBellButton } from "@/components/nav/notification-bell-button";
 import { SplashScreen } from "@/components/splash-screen";
+import { SessionBoot } from "@/components/analytics/session-boot";
 
 export const metadata: Metadata = {
   title: "MarkItch",
@@ -33,6 +34,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="de" className="h-full antialiased dark">
       <body className="flex min-h-full flex-col bg-black text-white font-sans">
         <SplashScreen />
+        <SessionBoot />
         {children}
         <NotificationBellButton isLoggedIn={Boolean(user)} unreadCount={unreadCount} />
         <BottomNav isLoggedIn={Boolean(user)} />

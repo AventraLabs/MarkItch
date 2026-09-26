@@ -130,6 +130,9 @@ export default async function ProfileSettingsPage() {
             <Link href="/admin/boosts" className="text-orange-400 hover:underline">
               Boosts →
             </Link>
+            <Link href="/admin/analytics" className="text-orange-400 hover:underline">
+              Analytics →
+            </Link>
           </div>
         </div>
       )}

@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { registerUser, type FormState } from "@/app/actions/auth";
 import { Field, FormError, SubmitButton } from "@/components/ui";
+import { trackVisitorEvent } from "@/lib/analytics-client";
 
 type AccountType = "acro" | "assent";
 
@@ -44,6 +45,13 @@ export function RegisterForm() {
   // components/ui.tsx for why an uncontrolled field loses this on error.
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+
+  // Phase 47: Registrierungs-Funnel (BETA-2-F) — "abgeschlossen" ist die
+  // Ground Truth users.createdAt, "begonnen" braucht aber ein eigenes Event,
+  // da ein Formularbesuch ohne Absenden sonst unsichtbar bliebe.
+  useEffect(() => {
+    trackVisitorEvent("register_started");
+  }, []);
 
   return (
     <form action={action}>

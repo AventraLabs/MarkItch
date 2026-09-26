@@ -564,6 +564,12 @@ export const brandAnalyticsEvents = pgTable(
     // one (a solo pitch's or a battle side's view — never both).
     soloPitchId: uuid("solo_pitch_id").references(() => soloPitches.id, { onDelete: "cascade" }),
     battleId: uuid("battle_id").references(() => battles.id, { onDelete: "cascade" }),
+    // Phase 47: anonymes, cookiebasiertes Besucher-Kennzeichen (kein Personenbezug,
+    // siehe visitorEvents unten) — zusätzlich zu brandId/kind, damit sich "Videos
+    // pro Session"/"3/5/10 Videos angesehen" aus den ohnehin schon laufenden
+    // view-Events berechnen lassen, ohne jeden View doppelt zu loggen. Auch für
+    // 'cta_click', 'vote_click' und 'login_required' genutzt (siehe analytics.ts).
+    anonId: text("anon_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("brand_analytics_events_brand_kind_idx").on(table.brandId, table.kind)],
@@ -571,6 +577,39 @@ export const brandAnalyticsEvents = pgTable(
 
 export type BrandAnalyticsEvent = typeof brandAnalyticsEvents.$inferSelect;
 export type NewBrandAnalyticsEvent = typeof brandAnalyticsEvents.$inferInsert;
+
+// Phase 47: BETA-2-F/G aus MarkItch_Launch_Minimum_Claude_Code_Prompt.md
+// ("Produkt-/Funnel-Analytics", "Vote-Funnel") — brandAnalyticsEvents deckt nur
+// content-gebundene Events ab (immer eine brandId nötig); Besuchs-/Konto-Events
+// wie "Session begonnen" oder "Registrierung begonnen" gehören zu keiner
+// bestimmten Marke, brauchen aber trotzdem einen anonymen Besucher-Bezug für
+// Sessions/Besucher-Zählung und D1/D7/D30-Retention. Bewusst eine eigene,
+// kleine Tabelle statt brandId nullable zu machen — hält die bestehende
+// Invariante von brandAnalyticsEvents unangetastet.
+export const visitorEvents = pgTable(
+  "visitor_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    anonId: text("anon_id").notNull(),
+    kind: text("kind").notNull(), // 'session_start' | 'register_started'
+    // Nur gesetzt, wenn zum Zeitpunkt des Events ein Account eingeloggt war —
+    // erlaubt später z.B. "wie viele Sessions kamen von einem bereits
+    // registrierten Nutzer", ohne dass anonId selbst je einen Personenbezug hätte.
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    // Referral-Code aus ?ref= beim ersten Aufruf dieser Session — von den
+    // Share-Buttons gesetzt (z.B. "battle:<id>"), um "Herkunft über geteilte
+    // MarkItch-Links" zu messen. Null = organischer/direkter Aufruf.
+    ref: text("ref"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("visitor_events_anon_created_idx").on(table.anonId, table.createdAt),
+    index("visitor_events_kind_created_idx").on(table.kind, table.createdAt),
+  ],
+);
+
+export type VisitorEvent = typeof visitorEvents.$inferSelect;
+export type NewVisitorEvent = typeof visitorEvents.$inferInsert;
 
 // Phase 19: Partner-Castings. A brand opens a call for other brands
 // (creators/influencers who've set up their own brand profile) to submit a

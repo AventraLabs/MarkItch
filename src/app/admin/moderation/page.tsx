@@ -20,6 +20,9 @@ export default async function ModerationPage() {
         <Link href="/admin/boosts" className="text-sm text-zinc-500 hover:text-zinc-300">
           Boosts →
         </Link>
+        <Link href="/admin/analytics" className="text-sm text-zinc-500 hover:text-zinc-300">
+          Analytics →
+        </Link>
       </div>
 
       <section className="mb-10">

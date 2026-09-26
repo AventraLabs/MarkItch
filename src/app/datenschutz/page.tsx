@@ -46,6 +46,12 @@ export default function DatenschutzPage() {
           &quot;Sicherheit&quot;), Push-Benachrichtigungs-Zugangsdaten deines Browsers, sofern du
           Benachrichtigungen aktivierst.
         </p>
+        <p>
+          <strong className="text-white">Anonyme Reichweiten-Statistik:</strong> ein zufällig erzeugtes,
+          nicht personenbezogenes Kennzeichen (Cookie), das lediglich zählt, wie viele Videos angesehen
+          werden, ob Besuche wiederkehren und über welchen geteilten Link jemand kam — ohne Namen, E-Mail
+          oder sonstigen Personenbezug, nie an Dritte weitergegeben.
+        </p>
       </Section>
 
       <Section title="Wofür wir sie verwenden">

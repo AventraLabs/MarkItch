@@ -23,6 +23,9 @@ export default async function BoostsAdminPage() {
         <Link href="/admin/moderation" className="text-sm text-zinc-500 hover:text-zinc-300">
           Moderation →
         </Link>
+        <Link href="/admin/analytics" className="text-sm text-zinc-500 hover:text-zinc-300">
+          Analytics →
+        </Link>
       </div>
 
       <section className="mb-10">

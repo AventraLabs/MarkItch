@@ -1,20 +1,40 @@
 import "server-only";
 import { and, count, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/db";
-import { brandAnalyticsEvents, battles, comments, likes, reactions, soloPitches, votes } from "@/db/schema";
+import { brandAnalyticsEvents, visitorEvents, battles, comments, likes, reactions, soloPitches, votes } from "@/db/schema";
 import { getFollowerCount } from "@/lib/follow";
 import { getAllBattles } from "@/lib/battle";
 import { getSoloPitchesForBrand } from "@/lib/solo-pitch";
 
-export type AnalyticsEventKind = "view" | "share";
+// Phase 47: 'cta_click' (Klick auf den Kauf-/Standort-Link eines Videos),
+// 'vote_click' (eingeloggter Nutzer klickt eine Duell-Seite an, unabhängig
+// vom Ausgang) und 'login_required' (nicht eingeloggter Nutzer trifft beim
+// Versuch zu voten auf die Login-Wand) ergänzen das bestehende 'view'/'share'
+// — für den Vote-Funnel aus dem BETA-Plan (§3.G). Der eigentliche
+// abgeschlossene Vote braucht kein eigenes Event, die `votes`-Tabelle ist
+// dafür schon die Ground Truth.
+export type AnalyticsEventKind = "view" | "share" | "cta_click" | "vote_click" | "login_required";
+
+export type VisitorEventKind = "session_start" | "register_started";
 
 /** Fire-and-forget event log — see schema.ts for why this is a log, not a counter. */
 export async function recordAnalyticsEvent(
   brandId: string,
   kind: AnalyticsEventKind,
-  target?: { soloPitchId?: string; battleId?: string },
+  target?: { soloPitchId?: string; battleId?: string; anonId?: string },
 ): Promise<void> {
-  await db.insert(brandAnalyticsEvents).values({ brandId, kind, soloPitchId: target?.soloPitchId, battleId: target?.battleId });
+  await db
+    .insert(brandAnalyticsEvents)
+    .values({ brandId, kind, soloPitchId: target?.soloPitchId, battleId: target?.battleId, anonId: target?.anonId });
+}
+
+/** Fire-and-forget — see visitorEvents in schema.ts for why this isn't just another brandAnalyticsEvents row. */
+export async function recordVisitorEvent(
+  anonId: string,
+  kind: VisitorEventKind,
+  extra?: { userId?: string | null; ref?: string | null },
+): Promise<void> {
+  await db.insert(visitorEvents).values({ anonId, kind, userId: extra?.userId ?? null, ref: extra?.ref ?? null });
 }
 
 async function getEventCount(brandId: string, kind: AnalyticsEventKind): Promise<number> {

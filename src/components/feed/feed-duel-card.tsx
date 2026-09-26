@@ -101,7 +101,11 @@ function VoteState({
     return (
       <div className="space-y-1">
         {tally.total > 0 && <p className="text-xs text-zinc-500">{tally.total} {tally.total === 1 ? "Stimme" : "Stimmen"} bisher</p>}
-        <a href="/login" className="text-xs text-orange-400 hover:underline">
+        <a
+          href="/login"
+          onClick={() => trackAnalyticsEvent(side.brandId, "login_required", { battleId: duel.battleId })}
+          className="text-xs text-orange-400 hover:underline"
+        >
           Anmelden, um abzustimmen
         </a>
       </div>
@@ -280,6 +284,8 @@ export function FeedDuelCard({
   }, [inView, onActive]);
 
   async function handleVote() {
+    // Phase 47: Vote-Funnel (BETA-2-G) — Klick-Intent, unabhängig vom Ausgang.
+    trackAnalyticsEvent(duel.sides[sideIndex].brandId, "vote_click", { battleId: duel.battleId });
     setVoting(true);
     try {
       await onVote(duel, sideIndex);
@@ -515,6 +521,7 @@ export function FeedDuelCard({
             href={side.ctaUrl}
             target="_blank"
             rel="noreferrer noopener"
+            onClick={() => trackAnalyticsEvent(side.brandId, "cta_click", { battleId: duel.battleId })}
             className="pointer-events-auto mb-2 inline-flex items-center gap-1 rounded-full bg-orange-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-orange-500"
           >
             {side.ctaLabel} →

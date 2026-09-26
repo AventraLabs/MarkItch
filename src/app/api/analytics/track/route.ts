@@ -11,13 +11,16 @@ import { recordAnalyticsEvent, type AnalyticsEventKind } from "@/lib/analytics";
  * outcome), so unlike vote/register this isn't rate-limited — see
  * src/lib/rate-limit.ts's bucket list for what actually needs it.
  */
+const VALID_KINDS: AnalyticsEventKind[] = ["view", "share", "cta_click", "vote_click", "login_required"];
+
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   const brandId = body?.brandId;
   const kind = body?.kind;
   const soloPitchId = typeof body?.soloPitchId === "string" ? body.soloPitchId : undefined;
   const battleId = typeof body?.battleId === "string" ? body.battleId : undefined;
-  if (typeof brandId !== "string" || !brandId || (kind !== "view" && kind !== "share")) {
+  const anonId = typeof body?.anonId === "string" && body.anonId ? body.anonId : undefined;
+  if (typeof brandId !== "string" || !brandId || !VALID_KINDS.includes(kind)) {
     return NextResponse.json({ error: "Ungültige Anfrage." }, { status: 400 });
   }
 
@@ -26,6 +29,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Ungültige Anfrage." }, { status: 400 });
   }
 
-  await recordAnalyticsEvent(brandId, kind as AnalyticsEventKind, { soloPitchId, battleId });
+  await recordAnalyticsEvent(brandId, kind as AnalyticsEventKind, { soloPitchId, battleId, anonId });
   return NextResponse.json({ ok: true });
 }

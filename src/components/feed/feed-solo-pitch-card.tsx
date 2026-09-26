@@ -208,6 +208,7 @@ export function FeedSoloPitchCard({
             href={pitch.ctaUrl}
             target="_blank"
             rel="noreferrer noopener"
+            onClick={() => trackAnalyticsEvent(pitch.brandId, "cta_click", { soloPitchId: pitch.soloPitchId })}
             className="pointer-events-auto mb-2 inline-flex items-center gap-1 rounded-full bg-orange-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-orange-500"
           >
             {pitch.ctaLabel} →
