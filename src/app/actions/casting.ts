@@ -7,6 +7,7 @@ import { createCasting, getActiveCastingForBrand, submitToCasting } from "@/lib/
 import { readVideoUrlField } from "@/lib/storage";
 import { validateCtaLink } from "@/lib/cta-link";
 import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
+import { AudioRightsSchema } from "@/lib/validation";
 
 const MAX_PROMPT_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 300;
@@ -88,6 +89,11 @@ export async function submitCastingEntry(
   const cta = validateCtaLink(formData);
   if ("errors" in cta) {
     return { error: Object.values(cta.errors)[0]![0] };
+  }
+
+  const audioRights = AudioRightsSchema.safeParse({ audioRightsConfirmed: formData.get("audioRightsConfirmed") });
+  if (!audioRights.success) {
+    return { error: Object.values(audioRights.error.flatten().fieldErrors)[0]![0] };
   }
 
   const { allowed } = await checkRateLimit("casting-submit", myBrand.id);

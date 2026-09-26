@@ -134,6 +134,17 @@ export function CreateBrandForm() {
         ))}
       </div>
 
+      <label className="mb-6 flex items-start gap-2 text-sm text-zinc-300">
+        <input type="checkbox" name="industryCompliance" required className="mt-1" />
+        Ich bestätige, dass meine Marke keine Tabakwaren, E-Zigaretten, verschreibungspflichtigen
+        Medikamente oder anderweitig rechtlich unzulässigen Produkte/Dienstleistungen bewirbt.
+      </label>
+      {state?.errors?.industryCompliance?.map((err) => (
+        <p key={err} className="mb-4 -mt-4 text-sm text-red-400">
+          {err}
+        </p>
+      ))}
+
       <SubmitButton>Marke veröffentlichen</SubmitButton>
     </form>
   );

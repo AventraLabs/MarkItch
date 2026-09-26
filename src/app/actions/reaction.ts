@@ -10,6 +10,7 @@ import { getBrandForUser } from "@/lib/brand";
 import { promoteReactionToBattle } from "@/lib/reaction";
 import { readVideoUrlField } from "@/lib/storage";
 import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
+import { AudioRightsSchema } from "@/lib/validation";
 
 export type ReactionFormState = { error?: string } | undefined;
 
@@ -82,6 +83,11 @@ export async function postReaction(_prevState: ReactionFormState, formData: Form
   const video = readVideoUrlField(formData, "reaction-videos");
   if ("error" in video) {
     return { error: video.error };
+  }
+
+  const audioRights = AudioRightsSchema.safeParse({ audioRightsConfirmed: formData.get("audioRightsConfirmed") });
+  if (!audioRights.success) {
+    return { error: Object.values(audioRights.error.flatten().fieldErrors)[0]![0] };
   }
 
   await db.insert(reactions).values({ soloPitchId, parentReactionId, brandId: myBrand.id, videoUrl: video.videoUrl });

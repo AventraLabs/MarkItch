@@ -7,6 +7,7 @@ import { postCreatorSubmission } from "@/lib/creator-charts";
 import { readVideoUrlField } from "@/lib/storage";
 import { validateCtaLink } from "@/lib/cta-link";
 import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
+import { AudioRightsSchema } from "@/lib/validation";
 
 const MAX_DESCRIPTION_LENGTH = 300;
 
@@ -55,6 +56,11 @@ export async function postCreatorVideo(
   const cta = validateCtaLink(formData);
   if ("errors" in cta) {
     return { errors: cta.errors };
+  }
+
+  const audioRights = AudioRightsSchema.safeParse({ audioRightsConfirmed: formData.get("audioRightsConfirmed") });
+  if (!audioRights.success) {
+    return { errors: audioRights.error.flatten().fieldErrors };
   }
 
   const { allowed } = await checkRateLimit("creator-submit", myBrand.id);

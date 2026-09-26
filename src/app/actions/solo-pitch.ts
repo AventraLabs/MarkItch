@@ -10,6 +10,7 @@ import { getBrandForUser } from "@/lib/brand";
 import { readVideoUrlField } from "@/lib/storage";
 import { DEFAULT_DUEL_CATEGORY } from "@/lib/battle-format";
 import { validateCtaLink } from "@/lib/cta-link";
+import { AudioRightsSchema } from "@/lib/validation";
 
 const MAX_DESCRIPTION_LENGTH = 300;
 
@@ -61,6 +62,11 @@ export async function postSoloPitch(_prevState: SoloPitchFormState, formData: Fo
   const cta = validateCtaLink(formData);
   if ("errors" in cta) {
     return { errors: cta.errors };
+  }
+
+  const audioRights = AudioRightsSchema.safeParse({ audioRightsConfirmed: formData.get("audioRightsConfirmed") });
+  if (!audioRights.success) {
+    return { errors: audioRights.error.flatten().fieldErrors };
   }
 
   const [pitch] = await db

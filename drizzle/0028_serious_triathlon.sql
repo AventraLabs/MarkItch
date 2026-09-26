@@ -1,0 +1,1 @@
+ALTER TABLE "brands" ADD COLUMN "industry_compliance_confirmed_at" timestamp with time zone;

@@ -70,6 +70,15 @@ export const brands = pgTable(
     website: text("website"),
     category: text("category").notNull(),
     country: text("country").notNull(),
+    // Phase 46: Branchen-Compliance-Attestierung (Rechtskonformitäts-Audit,
+    // Phase 45) — Österreich verbietet/beschränkt Werbung für bestimmte
+    // Produkte strikt (Tabak, E-Zigaretten, Rx-Medikamente). Ein
+    // automatischer Inhalts-Scan ist unrealistisch; die rechtlich tragfähige
+    // Umsetzung ist eine AGB-Bestätigung beim Erstellen, wie die PDF selbst
+    // für Musikrechte vorschlägt ("Rechtliche Freistellung (AGB)"). Nullable,
+    // weil vor dieser Migration erstellte Marken das nie bestätigt haben —
+    // absichtlich nicht rückwirkend gesetzt.
+    industryComplianceConfirmedAt: timestamp("industry_compliance_confirmed_at", { withTimezone: true }),
     // Phase 3: one showcase video per brand for now. A brand's actual
     // battle submissions get their own table once Phase 4/5 need it — this
     // column is just "the video on my public profile".

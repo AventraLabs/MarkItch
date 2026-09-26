@@ -72,3 +72,15 @@ export const CreateBrandSchema = z.object({
   category: z.enum(BrandCategories, "Bitte Kategorie wählen."),
   country: z.enum(BrandCountries, "Bitte Land wählen."),
 });
+
+// Phase 46: nur bei der Erstellung abgefragt, siehe brands.industryComplianceConfirmedAt.
+export const IndustryComplianceSchema = z.object({
+  industryCompliance: z.literal("on", "Bitte bestätige, dass deine Marke keine gesperrten Produkte bewirbt."),
+});
+
+// Phase 46: Rechtskonformitäts-Audit — Musikrechte-Freistellung (Option A der
+// PDF: "Rechtliche Freistellung (AGB)"), bei jedem Video-Upload mit Ton
+// (Solo-Pitch, Duell-Video, Reaktion, Creator-Video, Casting-Einreichung).
+export const AudioRightsSchema = z.object({
+  audioRightsConfirmed: z.literal("on", "Bitte bestätige, dass du alle Rechte am Ton hältst."),
+});

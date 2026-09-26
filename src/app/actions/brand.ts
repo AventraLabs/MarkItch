@@ -8,7 +8,7 @@ import { brands, brandMembers, users } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import { getBrandForUser } from "@/lib/brand";
 import { uploadImage, ALLOWED_IMAGE_TYPES } from "@/lib/storage";
-import { CreateBrandSchema } from "@/lib/validation";
+import { CreateBrandSchema, IndustryComplianceSchema } from "@/lib/validation";
 
 export type BrandFormState = { errors?: Record<string, string[]> } | undefined;
 export type UpdateBrandFormState = { errors?: Record<string, string[]>; success?: boolean } | undefined;
@@ -73,6 +73,13 @@ export async function createBrand(_prevState: BrandFormState, formData: FormData
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
+  // Phase 46: Branchen-Compliance-Attestierung (Rechtskonformitäts-Audit) —
+  // nur bei der Erstellung, siehe brands.industryComplianceConfirmedAt.
+  const compliance = IndustryComplianceSchema.safeParse({ industryCompliance: formData.get("industryCompliance") });
+  if (!compliance.success) {
+    return { errors: compliance.error.flatten().fieldErrors };
+  }
+
   let logoUrl: string | null = null;
   const logoFile = formData.get("logo");
   if (logoFile instanceof File && logoFile.size > 0) {
@@ -98,6 +105,7 @@ export async function createBrand(_prevState: BrandFormState, formData: FormData
       category: parsed.data.category,
       country: parsed.data.country,
       logoUrl,
+      industryComplianceConfirmedAt: new Date(),
     })
     .returning({ id: brands.id, slug: brands.slug });
 

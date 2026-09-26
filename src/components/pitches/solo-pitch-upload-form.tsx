@@ -5,6 +5,7 @@ import { postSoloPitch, type SoloPitchFormState } from "@/app/actions/solo-pitch
 import { FormError, SubmitButton } from "@/components/ui";
 import { VideoPickerInput } from "@/components/video-picker-input";
 import { CtaLinkFields } from "@/components/pitches/cta-link-fields";
+import { AudioRightsCheckbox } from "@/components/pitches/audio-rights-checkbox";
 
 export function SoloPitchUploadForm() {
   const [state, action] = useActionState<SoloPitchFormState, FormData>(postSoloPitch, undefined);
@@ -69,6 +70,7 @@ export function SoloPitchUploadForm() {
         onCtaLabelChange={setCtaLabel}
         onCtaUrlChange={setCtaUrl}
       />
+      <AudioRightsCheckbox errors={state?.errors} />
       <SubmitButton>Solo-Pitch posten</SubmitButton>
     </form>
   );

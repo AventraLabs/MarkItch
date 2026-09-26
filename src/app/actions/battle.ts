@@ -10,6 +10,7 @@ import { getBrandForUser } from "@/lib/brand";
 import { activateBattleIfBothSidesReady } from "@/lib/battle-stage";
 import { readVideoUrlField } from "@/lib/storage";
 import { validateCtaLink } from "@/lib/cta-link";
+import { AudioRightsSchema } from "@/lib/validation";
 
 export type UploadBattleVideoFormState = { error?: string } | undefined;
 
@@ -62,6 +63,11 @@ export async function uploadBattleVideo(
   const cta = validateCtaLink(formData);
   if ("errors" in cta) {
     return { error: Object.values(cta.errors)[0]![0] };
+  }
+
+  const audioRights = AudioRightsSchema.safeParse({ audioRightsConfirmed: formData.get("audioRightsConfirmed") });
+  if (!audioRights.success) {
+    return { error: Object.values(audioRights.error.flatten().fieldErrors)[0]![0] };
   }
 
   const now = new Date();

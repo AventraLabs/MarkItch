@@ -197,6 +197,13 @@
       "when": 1790369645644,
       "tag": "0027_tan_baron_strucker",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1790421780451,
+      "tag": "0028_serious_triathlon",
+      "breakpoints": true
     }
   ]
 }
