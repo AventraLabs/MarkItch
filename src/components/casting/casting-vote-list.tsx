@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CastingSubmissionWithBrand } from "@/lib/casting";
 import { ReportButton } from "@/components/moderation/report-button";
+import { AdLabel } from "@/components/ui";
 
 export function CastingVoteList({
   castingId,
@@ -66,9 +67,12 @@ export function CastingVoteList({
         return (
           <div key={s.id} className={`rounded-xl border p-3 ${isWinner ? "border-orange-500" : "border-zinc-800"}`}>
             <div className="mb-2 flex items-center justify-between">
-              <Link href={`/brands/${s.brandSlug}`} className="text-sm font-semibold text-white hover:underline">
-                {s.brandName}
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link href={`/brands/${s.brandSlug}`} className="text-sm font-semibold text-white hover:underline">
+                  {s.brandName}
+                </Link>
+                <AdLabel />
+              </div>
               {isWinner && <span className="text-xs font-semibold text-orange-400">🏆 Partner</span>}
             </div>
             <video src={s.videoUrl} className="mb-2 max-h-64 w-full rounded-lg bg-black object-contain" controls playsInline preload="metadata" />

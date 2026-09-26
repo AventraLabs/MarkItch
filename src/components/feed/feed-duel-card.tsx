@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { FollowButton } from "@/components/brand/follow-button";
 import { ReportButton } from "@/components/moderation/report-button";
+import { AdLabel } from "@/components/ui";
 import type { FeedDuel } from "@/lib/feed";
 import { trackAnalyticsEvent } from "@/lib/analytics-client";
 
@@ -503,6 +504,7 @@ export function FeedDuelCard({
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
             {stageLabel}
           </span>
+          <AdLabel />
           <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400">
             <Eye size={11} /> {duel.viewCount}
           </span>

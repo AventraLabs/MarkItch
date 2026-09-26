@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CreatorChartEntry } from "@/lib/creator-charts";
 import { ReportButton } from "@/components/moderation/report-button";
+import { AdLabel } from "@/components/ui";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
@@ -70,9 +71,12 @@ export function CreatorChartList({
               {i < 3 && <span>{MEDALS[i]}</span>}
               {e.creatorName}
             </Link>
-            <span className="text-xs text-zinc-500">
-              {e.voteCount} {e.voteCount === 1 ? "Stimme" : "Stimmen"}
-            </span>
+            <div className="flex items-center gap-2">
+              <AdLabel />
+              <span className="text-xs text-zinc-500">
+                {e.voteCount} {e.voteCount === 1 ? "Stimme" : "Stimmen"}
+              </span>
+            </div>
           </div>
           <video src={e.videoUrl} className="mb-2 max-h-64 w-full rounded-lg bg-black object-contain" controls playsInline preload="metadata" />
           {e.description && <p className="mb-2 text-sm text-white/90">{e.description}</p>}

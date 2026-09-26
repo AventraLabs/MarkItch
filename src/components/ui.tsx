@@ -72,6 +72,22 @@ export function FormSuccess({ message }: { message?: string }) {
   return <p className="mb-4 rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-400">{message}</p>;
 }
 
+// Phase 46: Rechtskonformitäts-Audit — jedes Video auf MarkItch ist von
+// einer Marke gepostete Werbung (das ist die ganze Produktidee, "Werbung
+// wird zum Entertainment"), nie privater Content. Österreichisches Recht
+// (Mediengesetz/UWG) verlangt eine eindeutig erkennbare Kennzeichnung, kein
+// vages "#ad" — dieses Badge steht neben jedem Solo-Pitch-/Duell-/Reaktions-
+// Typ-Badge, bewusst nicht ausblendbar, in derselben Bernstein-Farbe wie
+// eine Warnung, damit es sich sichtbar von den rein beschreibenden Badges
+// daneben abhebt.
+export function AdLabel() {
+  return (
+    <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-[10px] font-medium text-amber-300">
+      Anzeige
+    </span>
+  );
+}
+
 export function SubmitButton({ children }: { children: ReactNode }) {
   const { pending } = useFormStatus();
   return (

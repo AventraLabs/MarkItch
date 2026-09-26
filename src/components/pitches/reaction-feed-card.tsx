@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Heart, MessageCircle, MessageSquareShare, Play, Share2, Volume2, VolumeX } from "lucide-react";
 import { PromoteReactionButton } from "@/components/pitches/promote-reaction-button";
 import { ReportButton } from "@/components/moderation/report-button";
+import { AdLabel } from "@/components/ui";
 import type { ReactionRow } from "@/lib/reaction-threads";
 
 /**
@@ -154,6 +155,7 @@ export function ReactionFeedCard({
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
             {reaction.parentReactionId ? "Antwort im Thread" : "Reaktion"}
           </span>
+          <AdLabel />
         </div>
         {reaction.promotedToBattleId && (
           <Link href={`/pitches/${reaction.promotedToBattleId}`} className="pointer-events-auto text-sm text-orange-400 hover:underline">
